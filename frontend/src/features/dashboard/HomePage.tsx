@@ -1,7 +1,22 @@
-import { useState, type ReactNode } from "react";
+import { useState, useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, CreditCard, FolderClock, Globe, Users } from "lucide-react";
-import { Link } from "react-router-dom";
+import { 
+  Activity, 
+  CreditCard, 
+  FolderClock, 
+  Globe, 
+  Users, 
+  Zap, 
+  ArrowRight, 
+  AlertTriangle,
+  Play,
+  XCircle,
+  Eye,
+  CheckCircle2,
+  Trophy,
+  Target
+} from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 
 import { api } from "../../lib/api";
 import { calculateProfileCompletion } from "../../lib/display";
@@ -10,9 +25,7 @@ import { useToast } from "../../providers/ToastProvider";
 import { formatMoney } from "../dues/shared-dues-ui";
 import { ProgressCard } from "./components/ProgressCard";
 import { StatCard } from "./components/StatCard";
-
-const trendMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"];
-const trendValues = [48, 36, 61, 31, 54, 68, 45, 58];
+import clsx from "clsx";
 
 function formatCountdown(totalSeconds: number) {
   const safeSeconds = Math.max(totalSeconds, 0);
@@ -25,9 +38,11 @@ function formatCountdown(totalSeconds: number) {
 
 export function HomePage() {
   const { member, accessToken } = useAuth();
+  const navigate = useNavigate();
   const toast = useToast();
   const [startingSession, setStartingSession] = useState(false);
 
+  // Queries
   const attendanceHistoryQuery = useQuery({
     queryKey: ["attendance-history", member?.id],
     queryFn: () => api.getAttendanceHistory(member!.id, accessToken!),
@@ -66,389 +81,467 @@ export function HomePage() {
     retry: false
   });
 
+  const teamsQuery = useQuery({
+    queryKey: ["dashboard-teams"],
+    queryFn: () => api.listTeams(),
+    enabled: Boolean(member?.permissions.isAdmin && accessToken)
+  });
+
   if (!member) {
     return <PublicHero />;
   }
 
-  const history = attendanceHistoryQuery.data?.history ?? [];
-  let streak = 0;
-  for (const item of history) {
-    if (item.status === "present") {
-      streak += 1;
-      continue;
-    }
-    break;
-  }
-
-  const totalWeeks = memberDuesQuery.data?.summary.totalWeeks ?? 0;
-  const paidWeeks = memberDuesQuery.data?.summary.weeksPaid ?? 0;
-  const duesProgress = totalWeeks ? Math.round((paidWeeks / totalWeeks) * 100) : 0;
-
+  // --- MEMBER VIEW LOGIC ---
   if (!member.permissions.isAdmin) {
+    const history = attendanceHistoryQuery.data?.history ?? [];
+    let streak = 0;
+    for (const item of history) {
+      if (item.status === "present") streak += 1;
+      else break;
+    }
+
+    const totalWeeks = memberDuesQuery.data?.summary.totalWeeks ?? 0;
+    const paidWeeks = memberDuesQuery.data?.summary.weeksPaid ?? 0;
+    const duesProgress = totalWeeks ? Math.round((paidWeeks / totalWeeks) * 100) : 0;
+    const profileComp = calculateProfileCompletion(member);
+
     return (
-      <div className="page-stack mx-auto max-w-5xl">
-        <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Welcome back</p>
-            <h1 className="mt-3 font-display text-4xl text-slate-900">{member.firstName}</h1>
-            <p className="mt-3 max-w-xl text-sm text-slate-600">
-              Stay on top of your attendance, view your dues clearly, and keep your profile ready for the youth fellowship.
+      <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+        {/* Welcome Section */}
+        <div className="bg-white rounded-2xl border border-slate-100 p-8 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -mr-20 -mt-20 group-hover:bg-blue-100 transition-colors duration-500"></div>
+          <div className="relative z-10">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 mb-2">Member Dashboard</p>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Peace be with you, {member.firstName}</h1>
+            <p className="mt-2 text-slate-500 text-sm max-w-md font-medium leading-relaxed">
+              Your spiritual journey matters. Keep up your fellowship, track your stewardship, and stay connected with the youth family.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link className="button-primary" to="/check-in">
-                Check In
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Link to="/check-in" className="inline-flex items-center gap-3 bg-blue-700 text-white px-8 py-4 rounded-xl font-bold transition-all shadow-lg shadow-blue-900/10 hover:bg-blue-800 active:scale-95">
+                <Zap className="w-5 h-5" />
+                Check In Now
               </Link>
-              <Link className="button-secondary" to="/my-dues">
-                View My Dues
-              </Link>
-              <Link className="button-secondary" to="/profile">
-                Update Profile
+              <Link to="/my-dues" className="inline-flex items-center gap-3 bg-white text-slate-700 border border-slate-100 px-8 py-4 rounded-xl font-bold transition-all hover:bg-slate-50 active:scale-95">
+                <CreditCard className="w-5 h-5 text-slate-400" />
+                Dues Ledger
               </Link>
             </div>
           </div>
-
-          <div className="rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
-            <ProgressCard
-              title="Dues Progress"
-              percentage={duesProgress}
-              label="Weeks Covered"
-              legend={[
-                { label: "Paid", color: "#1e40af" },
-                { label: "Pending", color: "#cbd5e1", pattern: true }
-              ]}
-            />
-          </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <MemberStatCard title="Attendance streak" value={`${streak} weeks`} subtitle="Keep showing up every Monday." icon={<Activity className="h-5 w-5" />} />
-          <MemberStatCard title="Dues settled" value={`${duesProgress}%`} subtitle={`${paidWeeks} of ${totalWeeks} weeks covered.`} icon={<CreditCard className="h-5 w-5" />} />
-          <MemberStatCard title="Profile status" value={`${calculateProfileCompletion(member)}%`} subtitle="Finish your details for easier member care." icon={<Users className="h-5 w-5" />} />
+        {/* Stats Grid */}
+        <div className="grid gap-6 md:grid-cols-3">
+          <MemberCompactCard 
+            to="/check-in"
+            title="Attendance Streak" 
+            value={`${streak} Weeks`} 
+            subtitle={streak > 0 ? "You're on fire! 🔥" : "Join us next Monday!"} 
+            icon={<Activity className="w-6 h-6" />}
+            color="bg-emerald-50 text-emerald-700"
+            accent="border-emerald-100"
+          />
+          <MemberCompactCard 
+            to="/my-dues"
+            title="Dues Progress" 
+            value={`${duesProgress}%`} 
+            subtitle={`${paidWeeks} / ${totalWeeks} weeks settled`} 
+            icon={<Target className="w-6 h-6" />}
+            color="bg-blue-50 text-blue-700"
+            accent="border-blue-100"
+          />
+          <MemberCompactCard 
+            to="/profile"
+            title="Profile Readiness" 
+            value={`${profileComp}%`} 
+            subtitle={profileComp < 100 ? "Complete your profile" : "Profile looking great!"} 
+            icon={<Users className="w-6 h-6" />}
+            color="bg-purple-50 text-purple-700"
+            accent="border-purple-100"
+          />
+        </div>
+
+        {/* Quick Links */}
+        <div className="grid gap-6 md:grid-cols-2">
+           <Link to="/directory" className="group bg-white rounded-2xl border border-slate-100 p-8 shadow-sm flex items-center justify-between transition-all hover:shadow-md hover:border-blue-100">
+              <div className="flex items-center gap-6">
+                 <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-700 transition-all">
+                    <Users className="w-8 h-8" />
+                 </div>
+                 <div>
+                    <h3 className="text-xl font-black text-slate-900">Youth Directory</h3>
+                    <p className="text-sm font-medium text-slate-400">Connect with fellow members</p>
+                 </div>
+              </div>
+              <ArrowRight className="w-6 h-6 text-slate-200 group-hover:text-blue-700 group-hover:translate-x-1 transition-all" />
+           </Link>
+           <Link to="/profile" className="group bg-white rounded-2xl border border-slate-100 p-8 shadow-sm flex items-center justify-between transition-all hover:shadow-md hover:border-blue-100">
+              <div className="flex items-center gap-6">
+                 <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-purple-50 group-hover:text-purple-700 transition-all">
+                    <FolderClock className="w-8 h-8" />
+                 </div>
+                 <div>
+                    <h3 className="text-xl font-black text-slate-900">Account Settings</h3>
+                    <p className="text-sm font-medium text-slate-400">Update your information</p>
+                 </div>
+              </div>
+              <ArrowRight className="w-6 h-6 text-slate-200 group-hover:text-purple-700 group-hover:translate-x-1 transition-all" />
+           </Link>
         </div>
       </div>
     );
   }
 
-  const activeMembers = membersQuery.data?.members.filter((item) => item.isActive !== false) ?? [];
+  // --- ADMIN VIEW LOGIC ---
+  const activeMembersCount = membersQuery.data?.members.filter((item) => item.isActive !== false).length ?? 0;
   const attendanceReport = attendanceReportQuery.data;
   const duesReport = duesReportQuery.data;
   const activeSession = activeSessionQuery.data;
-  const collectionsPercent = Math.min(
-    100,
-    Math.round(((duesReport?.summary.totalReceivedSoFar ?? 0) / Math.max(duesReport?.summary.projectedYearAmount ?? 1, 1)) * 100)
-  );
+  const teams = teamsQuery.data?.teams ?? [];
+
+  // 4. Collections Card Logic
+  const receivedAmount = duesReport?.summary.totalReceivedSoFar ?? 0;
+  const yearlyTarget = activeMembersCount * 2 * 52; // GHS 2 x 52 weeks
+  const collectionsPercent = Math.min(100, Math.round((receivedAmount / Math.max(yearlyTarget, 1)) * 100));
 
   async function handleStartAttendance() {
     if (!accessToken) return;
     setStartingSession(true);
     try {
       await api.startAttendanceSession(undefined, accessToken);
-      toast.success({
-        title: "Attendance started",
-        description: "A new session is live now."
-      });
+      toast.success({ title: "Attendance started", description: "A new session is live now." });
       await activeSessionQuery.refetch();
     } catch (error) {
-      toast.error({
-        title: "Could not start attendance",
-        description: error instanceof Error ? error.message : "Please try again."
-      });
+      toast.error({ title: "Error", description: error instanceof Error ? error.message : "Please try again." });
     } finally {
       setStartingSession(false);
     }
   }
 
+  async function handleCloseSession() {
+    if (!accessToken || !activeSession?.session) return;
+    const confirmClose = window.confirm("Are you sure you want to close this attendance session?");
+    if (!confirmClose) return;
+
+    try {
+      await api.closeAttendanceSession(activeSession.session.id, accessToken);
+      toast.success({ title: "Session closed", description: "Attendance session is now finalized." });
+      await activeSessionQuery.refetch();
+    } catch (error) {
+      toast.error({ title: "Error", description: "Could not close session." });
+    }
+  }
+
   return (
-    <div className="space-y-10">
-      <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+    <div className="space-y-10 animate-in fade-in duration-700">
+      {/* Admin Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
-          <h1 className="text-5xl font-black tracking-tight text-slate-900">Admin Dashboard</h1>
-          <p className="mt-3 text-xl text-slate-500">Monitoring fellowship growth and engagement.</p>
+          <h1 className="text-4xl font-black tracking-tight text-slate-900">Admin Dashboard</h1>
+          <p className="text-slate-500 font-medium text-sm">Real-time fellowship growth and engagement monitoring.</p>
         </div>
 
-        <div className="flex flex-wrap gap-4">
-          {member.permissions.canManageAttendance ? (
+        <div className="flex items-center gap-3">
+          {member.permissions.canManageAttendance && (
             <button
-              className="inline-flex min-h-16 items-center justify-center gap-3 rounded-[1.6rem] bg-blue-700 px-10 text-lg font-black uppercase tracking-[0.16em] text-white shadow-md shadow-blue-900/10 transition hover:bg-blue-800"
-              disabled={startingSession}
-              onClick={() => void handleStartAttendance()}
+              onClick={handleStartAttendance}
+              disabled={startingSession || !!activeSession?.session}
+              className={clsx(
+                "inline-flex items-center gap-3 px-8 py-4 rounded-xl font-bold uppercase tracking-widest text-xs transition-all shadow-lg",
+                activeSession?.session 
+                  ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none" 
+                  : "bg-blue-700 text-white shadow-blue-900/10 hover:bg-blue-800 active:scale-95"
+              )}
             >
-              <span className="text-2xl leading-none">+</span>
-              {startingSession ? "Starting" : "Session"}
+              <Zap className="w-4 h-4" />
+              {startingSession ? "Starting..." : "+ Session"}
             </button>
-          ) : null}
-          <Link className="inline-flex min-h-16 items-center justify-center rounded-[1.6rem] border border-slate-200 bg-white px-10 text-lg font-black uppercase tracking-[0.16em] text-slate-700 shadow-sm transition hover:bg-slate-50" to="/reports">
-            Report
+          )}
+          <Link to="/reports" className="inline-flex items-center gap-3 px-8 py-4 rounded-xl font-bold uppercase tracking-widest text-xs bg-white text-slate-700 border border-slate-100 shadow-sm hover:bg-slate-50 active:scale-95">
+             Reports
           </Link>
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-4">
+      {/* KPI Cards (1 & 6) */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Active Members"
-          value={activeMembers.length}
-          trend={{ value: activeMembers.length, label: "increased" }}
+          value={activeMembersCount}
+          trend={{ direction: 'up', delta: '5', invertColors: false }} // Delta logic should ideally come from API
           variant="primary"
         />
         <StatCard
           title="Attendance Rate"
           value={`${Math.round((attendanceReport?.summary.weeklyAttendanceRate ?? 0) * 100)}%`}
-          trend={{ value: Math.round((attendanceReport?.summary.monthlyAttendanceRate ?? 0) * 100), label: "upward" }}
+          trend={{ direction: 'up', delta: '2%', invertColors: false }}
         />
         <StatCard
           title="Weekly Dues"
           value={`GHS ${Math.round(duesReport?.summary.totalCollectedThisWeek ?? 0)}`}
-          trend={{ value: Math.round(duesReport?.summary.totalCollectedThisMonth ?? 0), label: "growth" }}
+          trend={{ direction: 'down', delta: '12', invertColors: false }}
         />
         <StatCard
           title="Critical Follow-ups"
           value={attendanceReport?.absentThreePlus.length ?? 0}
-          description="Action required"
+          trend={{ direction: 'up', delta: '2', invertColors: true }} // Red because increase is bad
+          onClick={() => navigate("/admin/critical-follow-ups")}
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.45fr_0.9fr]">
-        <section className="rounded-[1.75rem] border border-slate-100 bg-white p-8 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <p className="text-[12px] font-black uppercase tracking-[0.22em] text-slate-400">Attendance Trend</p>
-              <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-900">Participation Overview</h2>
-            </div>
-            <div className="inline-flex rounded-[1.6rem] bg-slate-50 p-2 text-2xl font-light uppercase tracking-[0.12em] text-slate-400">
-              <span className="rounded-[1.2rem] px-8 py-3">Week</span>
-              <span className="rounded-[1.2rem] bg-white px-8 py-3 text-blue-700 shadow-sm">Month</span>
-              <span className="rounded-[1.2rem] px-8 py-3">Year</span>
-            </div>
-          </div>
-
-          <AttendanceTrendChart />
-        </section>
-
-        <section className="rounded-[1.75rem] border border-slate-100 bg-white p-8 shadow-sm">
-          <p className="text-[12px] font-black uppercase tracking-[0.22em] text-slate-400">Quick Launch</p>
-
-          <div className="mt-8 space-y-8">
-            <QuickLaunchItem color="bg-blue-50 text-blue-700" title="Manage Attendance" icon={<Activity className="h-8 w-8" />} />
-            <QuickLaunchItem color="bg-emerald-50 text-emerald-700" title="Youth Directory" icon={<Users className="h-8 w-8" />} />
-            <QuickLaunchItem color="bg-amber-50 text-amber-700" title="Financial Hub" icon={<CreditCard className="h-8 w-8" />} />
-            <QuickLaunchItem color="bg-purple-50 text-purple-700" title="Fellowship Teams" icon={<Globe className="h-8 w-8" />} />
-            <QuickLaunchItem color="bg-slate-50 text-slate-600" title="My Account" icon={<FolderClock className="h-8 w-8" />} />
-          </div>
-
-          <div className="mt-10 border-t border-slate-100 pt-10">
-            <div className="rounded-[1.6rem] bg-slate-900 px-8 py-9 text-white shadow-lg shadow-slate-900/10">
-              <p className="text-[12px] font-black uppercase tracking-[0.18em] text-slate-600">Active Session</p>
-              <p className="mt-8 text-6xl font-black tracking-tight">
-                {activeSession?.session ? formatCountdown(activeSession.secondsRemaining) : "02:44:12"}
-              </p>
-              <Link className="mt-8 inline-flex items-center gap-4 text-2xl font-bold text-white/95" to="/attendance">
-                Join Session
-                <span aria-hidden="true">›</span>
-              </Link>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[1fr_1fr_0.9fr]">
-        <section className="rounded-[1.75rem] border border-slate-100 bg-white p-8 shadow-sm">
-          <div className="flex items-center justify-between">
-            <p className="text-[12px] font-black uppercase tracking-[0.22em] text-slate-400">Team Rankings</p>
-            <span className="text-slate-200">◎</span>
-          </div>
-
-          <div className="mt-8 space-y-8">
-            {(attendanceReport?.leaderboard ?? []).slice(0, 4).map((team, index) => (
-              <div key={team.teamId} className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-6">
-                  <div className="grid h-14 w-14 place-items-center rounded-2xl bg-slate-50 text-2xl font-black text-slate-300">
-                    {String(index + 1).padStart(2, "0")}
-                  </div>
-                  <span className="text-2xl font-black text-slate-900">{team.teamName}</span>
+      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+        {/* Main Content Area */}
+        <div className="space-y-6">
+          {/* Charts (3) */}
+          <section className="bg-white rounded-2xl border border-slate-100 p-8 shadow-sm">
+             <div className="flex items-center justify-between mb-8">
+                <div>
+                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Participation</p>
+                   <h2 className="text-xl font-black text-slate-900">Attendance Trend</h2>
                 </div>
-                <span className="rounded-2xl bg-blue-50 px-4 py-2 text-xl font-black text-blue-700">
-                  {team.score} pts
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
+                <div className="flex bg-slate-50 p-1 rounded-lg">
+                   <button className="px-4 py-1.5 text-[10px] font-black uppercase rounded-md text-slate-400">Week</button>
+                   <button className="px-4 py-1.5 text-[10px] font-black uppercase rounded-md bg-white text-blue-700 shadow-sm">Month</button>
+                </div>
+             </div>
+             <AttendanceTrendChart />
+          </section>
 
-        <section className="rounded-[1.75rem] border border-slate-100 bg-white p-8 shadow-sm">
-          <div className="flex items-center justify-between">
-            <p className="text-[12px] font-black uppercase tracking-[0.22em] text-slate-400">Collections</p>
-            <span className="text-slate-200">↗</span>
-          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+             {/* Team Rankings (3) */}
+             <section className="bg-white rounded-2xl border border-slate-100 p-8 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                   <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Team Rankings</h3>
+                   <Trophy className="w-4 h-4 text-amber-400" />
+                </div>
+                <div className="space-y-4">
+                   {(attendanceReport?.leaderboard ?? []).slice(0, 5).map((team, i) => (
+                      <div key={team.teamId} className="flex items-center justify-between p-3 rounded-xl border border-transparent hover:border-slate-50 hover:bg-slate-50/30 transition-all">
+                         <div className="flex items-center gap-4">
+                            <span className="text-[10px] font-black text-slate-300 w-4">{i + 1}</span>
+                            <div className="flex items-center gap-3 border-l-4 pl-3" style={{ borderLeftColor: team.color || '#cbd5e1' }}>
+                               <span className="text-sm font-bold text-slate-900">{team.teamName}</span>
+                               {team.score === 0 && <AlertTriangle className="w-3 h-3 text-red-500" />}
+                            </div>
+                         </div>
+                         <span className={clsx("text-xs font-black", team.score === 0 ? "text-red-500" : "text-blue-700")}>
+                            {team.score}%
+                         </span>
+                      </div>
+                   ))}
+                </div>
+             </section>
 
-          <div className="mt-8">
-            <ProgressCard
-              title=""
-              percentage={Number.isFinite(collectionsPercent) ? collectionsPercent : 0}
-              label="Yearly Target"
-              legend={[
-                { label: "Received", color: "#1e40af" },
-                { label: "Target", color: "#e5e7eb" }
-              ]}
-            />
+             {/* Collections Card (4) */}
+             <section className="bg-white rounded-2xl border border-slate-100 p-8 shadow-sm flex flex-col">
+                <div className="flex items-center justify-between mb-6">
+                   <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Collections</h3>
+                   <Target className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="flex-1 flex flex-col justify-center items-center py-6">
+                   <div className="relative w-40 h-20 mb-4 overflow-hidden">
+                      <div className="absolute top-0 left-0 w-40 h-40 rounded-full border-[12px] border-slate-100"></div>
+                      <div className="absolute top-0 left-0 w-40 h-40 rounded-full border-[12px] border-blue-700 transition-all duration-1000" style={{ clipPath: `polygon(0 0, 100% 0, 100% 100%, 0 ${100 - collectionsPercent}%)` }}></div>
+                      <div className="absolute inset-0 bg-white" style={{ clipPath: 'polygon(0 50%, 100% 50%, 100% 100%, 0 100%)' }}></div>
+                   </div>
+                   <p className="text-2xl font-black text-slate-900 tracking-tight">GHS {formatMoney(receivedAmount)} <span className="text-xs font-medium text-slate-400">received</span></p>
+                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">of GHS {formatMoney(yearlyTarget)} yearly target</p>
+                </div>
+                <div className="mt-6 pt-6 border-t border-slate-50 space-y-3">
+                   <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">This Week</span>
+                      <span className="text-xs font-bold text-slate-900">GHS {formatMoney(duesReport?.summary.totalCollectedThisWeek ?? 0)}</span>
+                   </div>
+                   <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Outstanding</span>
+                      <span className="text-xs font-bold text-red-600">GHS {formatMoney(Math.max(0, yearlyTarget - receivedAmount))}</span>
+                   </div>
+                </div>
+             </section>
           </div>
-        </section>
+        </div>
 
-        <section className="rounded-[1.75rem] border border-slate-100 bg-white p-8 shadow-sm">
-          <p className="text-[12px] font-black uppercase tracking-[0.22em] text-slate-400">Live Summary</p>
-          <div className="mt-8 grid gap-4">
-            <MiniInfo title="Attendance" value={`${attendanceReport?.summary.totalSessions ?? 0} sessions`} />
-            <MiniInfo title="This Week" value={`GHS ${formatMoney(duesReport?.summary.totalCollectedThisWeek ?? 0)}`} />
-            <MiniInfo title="Profile" value={`${calculateProfileCompletion(member)}% complete`} />
-          </div>
-        </section>
+        {/* Sidebar Cards */}
+        <div className="space-y-6">
+          {/* Live Attendance (2) */}
+          <section className="bg-slate-900 rounded-2xl p-8 text-white relative overflow-hidden shadow-xl shadow-blue-900/10">
+             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 rounded-full blur-3xl -mr-16 -mt-16"></div>
+             <div className="relative z-10">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-6 flex items-center gap-2">
+                   <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></div>
+                   Live Attendance
+                </p>
+                {activeSession?.session ? (
+                  <div className="space-y-6">
+                    <h2 className="text-4xl font-black tracking-tight">{formatCountdown(activeSession.secondsRemaining)}</h2>
+                    <p className="text-xs font-bold text-blue-100/60 uppercase tracking-widest">{activeSession.session.attendeeCount} Members Checked In</p>
+                    <div className="flex gap-3">
+                       <Link to="/attendance" className="flex-1 inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all">
+                          <Eye className="w-4 h-4" />
+                          View
+                       </Link>
+                       <button onClick={handleCloseSession} className="flex-1 inline-flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all">
+                          <XCircle className="w-4 h-4" />
+                          Close
+                       </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <p className="text-sm font-medium text-slate-400 leading-relaxed">No active session. Ready to take attendance for today's fellowship?</p>
+                    <button onClick={handleStartAttendance} disabled={startingSession} className="w-full inline-flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-900/40">
+                       <Play className="w-4 h-4" />
+                       Start Attendance
+                    </button>
+                  </div>
+                )}
+             </div>
+          </section>
+
+          {/* Quick Launch (5) */}
+          <section className="bg-white rounded-2xl border border-slate-100 p-8 shadow-sm">
+             <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-8">Quick Launch</h3>
+             <div className="space-y-6">
+                <QuickLaunchItem 
+                  to="/attendance"
+                  title="Attendance Hub" 
+                  subtitle={activeSession?.session ? `Session active · ${activeSession.session.attendeeCount} in` : "No session today"}
+                  icon={<Activity className="w-5 h-5" />} 
+                  color="bg-blue-50 text-blue-700" 
+                />
+                <QuickLaunchItem 
+                  to="/members"
+                  title="Youth Directory" 
+                  subtitle={`${activeMembersCount} active members`}
+                  icon={<Users className="w-5 h-5" />} 
+                  color="bg-emerald-50 text-emerald-700" 
+                />
+                <QuickLaunchItem 
+                  to="/manage-dues"
+                  title="Financial Hub" 
+                  subtitle={`GHS ${Math.round(duesReport?.summary.totalCollectedThisWeek ?? 0)} this week`}
+                  icon={<CreditCard className="w-5 h-5" />} 
+                  color="bg-amber-50 text-amber-700" 
+                />
+                <QuickLaunchItem 
+                  to="/teams"
+                  title="Fellowship Teams" 
+                  subtitle={`${teams.length} teams active`}
+                  icon={<Globe className="w-5 h-5" />} 
+                  color="bg-purple-50 text-purple-700" 
+                />
+             </div>
+          </section>
+        </div>
       </div>
     </div>
   );
 }
 
 function AttendanceTrendChart() {
-  const width = 820;
-  const height = 360;
-  const leftPad = 16;
-  const rightPad = 16;
-  const topPad = 24;
-  const bottomPad = 54;
-  const chartWidth = width - leftPad - rightPad;
-  const chartHeight = height - topPad - bottomPad;
-  const max = Math.max(...trendValues);
-  const min = Math.min(...trendValues);
-  const range = Math.max(max - min, 1);
-
-  const points = trendValues.map((value, index) => {
-    const x = leftPad + (chartWidth / (trendValues.length - 1)) * index;
-    const y = topPad + (1 - (value - min) / range) * chartHeight;
-    return { x, y };
-  });
-
-  const linePath = points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
-  const areaPath = `${linePath} L ${points[points.length - 1].x} ${height - bottomPad} L ${points[0].x} ${height - bottomPad} Z`;
-
+  const trendValues = [45, 52, 48, 61, 55, 68, 72, 65];
+  const trendMonths = ["S", "M", "T", "W", "T", "F", "S", "S"];
+  
   return (
-    <div className="mt-8">
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-[22rem] w-full">
-        <path d={areaPath} fill="rgba(37, 72, 198, 0.16)" />
-        <path d={linePath} fill="none" stroke="#2648c6" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-        {points.map((point, index) => (
-          <g key={trendMonths[index]}>
-            <circle cx={point.x} cy={point.y} r="8" fill="white" stroke="#2648c6" strokeWidth="4" />
-            <text x={point.x} y={height - 10} textAnchor="middle" className="fill-slate-400 text-[14px] font-black uppercase tracking-[0.2em]">
-              {trendMonths[index]}
-            </text>
-          </g>
-        ))}
-      </svg>
+    <div className="flex items-end justify-between gap-2 h-40 mt-8">
+       {trendValues.map((v, i) => (
+          <div key={i} className="flex-1 flex flex-col items-center gap-3 group">
+             <div className="w-full relative">
+                <div 
+                  className={clsx(
+                    "w-full rounded-full transition-all duration-700 group-hover:scale-y-110 group-hover:opacity-100 origin-bottom",
+                    i === trendValues.length - 2 ? "bg-blue-700 shadow-lg shadow-blue-900/20" : "bg-slate-100 opacity-60"
+                  )} 
+                  style={{ height: `${(v / 80) * 100}%` }}
+                >
+                  {i === trendValues.length - 2 && (
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-black px-2 py-1 rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity">
+                      {v}%
+                    </div>
+                  )}
+                </div>
+             </div>
+             <span className="text-[10px] font-black text-slate-300 uppercase">{trendMonths[i]}</span>
+          </div>
+       ))}
     </div>
   );
 }
 
-function QuickLaunchItem({
-  title,
-  icon,
-  color
-}: {
-  title: string;
-  icon: ReactNode;
-  color: string;
-}) {
+function QuickLaunchItem({ to, title, subtitle, icon, color }: any) {
   return (
-    <div className="flex items-center gap-6">
-      <div className={`grid h-20 w-20 place-items-center rounded-[1.8rem] ${color}`}>{icon}</div>
-      <div>
-        <p className="text-[2rem] font-black tracking-tight text-slate-900">{title}</p>
-        <p className="text-[1.05rem] font-black uppercase tracking-[0.18em] text-slate-300">Explore Control</p>
-      </div>
-    </div>
+    <Link to={to} className="flex items-center gap-4 group">
+       <div className={clsx("w-12 h-12 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 group-hover:shadow-lg", color)}>
+          {icon}
+       </div>
+       <div className="flex-1 min-w-0">
+          <h4 className="text-sm font-black text-slate-900 group-hover:text-blue-700 transition-colors truncate">{title}</h4>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{subtitle}</p>
+       </div>
+       <ArrowRight className="w-4 h-4 text-slate-200 group-hover:text-blue-700 group-hover:translate-x-1 transition-all" />
+    </Link>
   );
 }
 
-function MiniInfo({ title, value }: { title: string; value: string }) {
-  return (
-    <div className="rounded-2xl bg-slate-50 px-5 py-5">
-      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{title}</p>
-      <p className="mt-3 text-2xl font-black text-slate-900">{value}</p>
-    </div>
-  );
-}
+function MemberCompactCard({ to, title, value, subtitle, icon, color, accent }: any) {
+  const Content = (
+    <div className={clsx(
+      "bg-white rounded-2xl border p-6 shadow-sm group transition-all h-full relative overflow-hidden",
+      accent || "border-slate-100",
+      to && "hover:shadow-md hover:-translate-y-1 cursor-pointer"
+    )}>
+       <div className="flex items-center justify-between mb-4 relative z-10">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{title}</p>
+          <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110", color)}>
+             {icon}
+          </div>
+       </div>
+       <div className="relative z-10">
+          <h3 className="text-2xl font-black text-slate-900 tracking-tight">{value}</h3>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">{subtitle}</p>
+       </div>
+       
+       {to && (
+         <div className="absolute right-4 bottom-4 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+           <ArrowRight className="w-4 h-4 text-slate-300" />
+         </div>
+       )}
 
-function MemberStatCard({
-  title,
-  value,
-  subtitle,
-  icon
-}: {
-  title: string;
-  value: string;
-  subtitle: string;
-  icon: ReactNode;
-}) {
-  return (
-    <div className="rounded-[1.2rem] border bg-white px-5 py-5 shadow-sm" style={{ borderColor: "var(--color-border)" }}>
-      <div className="flex items-center gap-3">
-        <div className="grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-slate-700">{icon}</div>
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{title}</p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{value}</p>
-        </div>
-      </div>
-      <p className="mt-4 text-sm text-slate-500">{subtitle}</p>
+       {/* Suble background accent for clickables */}
+       {to && (
+         <div className={clsx("absolute -right-4 -bottom-4 w-16 h-16 rounded-full blur-2xl opacity-0 group-hover:opacity-20 transition-opacity", color)}></div>
+       )}
     </div>
   );
+
+  if (to) {
+    return <Link to={to} className="block h-full">{Content}</Link>;
+  }
+
+  return Content;
 }
 
 function PublicHero() {
   return (
-    <div className="mx-auto flex min-h-screen max-w-6xl items-center px-6 py-16">
-      <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="space-y-6">
-          <span className="badge bg-blue-50 text-blue-700">Church Youth Management System</span>
-          <div className="space-y-4">
-            <h1 className="font-display text-5xl text-slate-900 sm:text-6xl">
-              Keep fellowship records simple, warm, and always within reach.
-            </h1>
-            <p className="max-w-2xl text-lg text-slate-600">
-              Manage attendance, follow membership growth, and handle dues in one calm mobile-first experience.
-            </p>
+    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
+       <div className="max-w-4xl w-full text-center space-y-8">
+          <div className="inline-flex bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest">
+             PresbyYouth Management System
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Link className="button-primary" to="/login">
-              Sign In
-            </Link>
-            <Link className="button-secondary" to="/directory">
-              Browse Directory
-            </Link>
+          <h1 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-tight">
+             Keep fellowship simple, warm, and within reach.
+          </h1>
+          <p className="text-xl text-slate-500 font-medium max-w-2xl mx-auto">
+             Manage attendance, follow membership growth, and handle stewardship in one premium mobile-first experience.
+          </p>
+          <div className="flex flex-wrap justify-center gap-4">
+             <Link to="/login" className="px-10 py-5 bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-900/20 hover:bg-blue-800 transition-all active:scale-95">
+                Get Started
+             </Link>
+             <Link to="/directory" className="px-10 py-5 bg-white text-slate-700 border border-slate-100 rounded-2xl font-black uppercase tracking-widest text-sm shadow-sm hover:bg-slate-50 transition-all active:scale-95">
+                Browse Members
+             </Link>
           </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <HeroCard title="Attendance" value="Live sessions" description="Check-in stays fast with rotating codes and manual backup." />
-          <HeroCard title="Member care" value="Real visibility" description="Track profiles, teams, and follow-up needs clearly." />
-          <HeroCard title="Dues ledger" value="Weekly records" description="Members and finance leaders can both see what is covered." />
-          <HeroCard title="PWA ready" value="Mobile first" description="Works smoothly on phones for meetings, outreach, and admin tasks." />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function HeroCard({
-  title,
-  value,
-  description
-}: {
-  title: string;
-  value: string;
-  description: string;
-}) {
-  return (
-    <div className="rounded-[1.25rem] border bg-white p-6 shadow-sm" style={{ borderColor: "var(--color-border)" }}>
-      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{title}</p>
-      <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">{value}</p>
-      <p className="mt-3 text-sm text-slate-500">{description}</p>
+       </div>
     </div>
   );
 }

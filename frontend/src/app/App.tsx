@@ -17,6 +17,7 @@ import { MembersPage } from "../features/members/MembersPage";
 import { ProfilePage } from "../features/profile/ProfilePage";
 import { TeamsPage } from "../features/teams/TeamsPage";
 import { ReportsPage } from "../features/dashboard/ReportsPage";
+import { CriticalFollowupsPage } from "../features/dashboard/CriticalFollowupsPage";
 import { useAuth } from "../providers/AuthProvider";
 
 function Root() {
@@ -58,7 +59,8 @@ const router = createBrowserRouter([
         children: [
           { path: "members", element: <MembersPage /> },
           { path: "teams", element: <TeamsPage /> },
-          { path: "reports", element: <ReportsPage /> }
+          { path: "reports", element: <ReportsPage /> },
+          { path: "admin/critical-follow-ups", element: <CriticalFollowupsPage /> }
         ]
       },
       {
