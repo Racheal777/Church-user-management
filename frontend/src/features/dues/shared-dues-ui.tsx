@@ -1,5 +1,6 @@
 import type { DuesLedgerItem, DuesLedgerResponse } from "../../lib/api";
 import clsx from "clsx";
+import { motion } from "framer-motion";
 
 export const WEEKLY_DUES_AMOUNT = 2;
 export const currentDate = new Date();
@@ -200,4 +201,3 @@ function toIsoDate(value: string | Date) {
   const date = typeof value === "string" ? new Date(value) : value;
   return date.toISOString().slice(0, 10);
 }
-import { motion } from "framer-motion";

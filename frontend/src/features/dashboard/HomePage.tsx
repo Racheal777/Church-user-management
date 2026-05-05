@@ -17,6 +17,7 @@ import {
   Target
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { api } from "../../lib/api";
 import { calculateProfileCompletion } from "../../lib/display";
@@ -108,24 +109,51 @@ export function HomePage() {
     return (
       <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
         {/* Welcome Section */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-8 shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -mr-20 -mt-20 group-hover:bg-blue-100 transition-colors duration-500"></div>
-          <div className="relative z-10">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 mb-2">Member Dashboard</p>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Peace be with you, {member.firstName}</h1>
-            <p className="mt-2 text-slate-500 text-sm max-w-md font-medium leading-relaxed">
-              Your spiritual journey matters. Keep up your fellowship, track your stewardship, and stay connected with the youth family.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Link to="/check-in" className="inline-flex items-center gap-3 bg-blue-700 text-white px-8 py-4 rounded-xl font-bold transition-all shadow-lg shadow-blue-900/10 hover:bg-blue-800 active:scale-95">
-                <Zap className="w-5 h-5" />
-                Check In Now
-              </Link>
-              <Link to="/my-dues" className="inline-flex items-center gap-3 bg-white text-slate-700 border border-slate-100 px-8 py-4 rounded-xl font-bold transition-all hover:bg-slate-50 active:scale-95">
-                <CreditCard className="w-5 h-5 text-slate-400" />
-                Dues Ledger
-              </Link>
-            </div>
+        <div className="bg-white rounded-3xl border border-slate-100 p-8 md:p-12 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-50 rounded-full blur-[100px] -mr-32 -mt-32 opacity-60 group-hover:bg-blue-100 transition-colors duration-700"></div>
+          
+          <div className="relative z-10 space-y-10">
+             <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+                <div className="flex items-center gap-8">
+                   <div className="w-24 h-24 bg-white rounded-3xl shadow-2xl shadow-blue-900/10 p-3 flex items-center justify-center border border-slate-50 group-hover:scale-110 transition-transform duration-700 relative">
+                      <div className="absolute inset-0 bg-blue-600/5 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      <img src="/logo.png" alt="YPG Logo" className="w-full h-full object-contain relative z-10" />
+                   </div>
+                   <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                         <span className="px-3 py-1 bg-blue-700 text-white text-[10px] font-black rounded-lg uppercase tracking-[0.2em] shadow-lg shadow-blue-900/20">YPG</span>
+                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Service all the way</span>
+                      </div>
+                      <h1 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">
+                        Shalom, {member?.firstName}
+                      </h1>
+                      <p className="text-slate-500 font-medium text-sm max-w-sm">
+                        Your spiritual journey is our priority. Stay active and grow in faith.
+                      </p>
+                   </div>
+                </div>
+
+                <div className="hidden lg:flex items-center gap-4 bg-emerald-50 px-8 py-5 rounded-3xl border border-emerald-100/50 shadow-sm shadow-emerald-900/5">
+                   <div className="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shadow-xl shadow-emerald-500/20">
+                      <CheckCircle2 className="w-6 h-6" />
+                   </div>
+                   <div>
+                      <p className="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-0.5">Account Status</p>
+                      <p className="text-base font-bold text-emerald-900 tracking-tight">Verified Member</p>
+                   </div>
+                </div>
+             </div>
+
+             <div className="flex flex-wrap gap-4">
+                <Link to="/check-in" className="inline-flex items-center gap-3 bg-slate-900 text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl shadow-slate-900/20 hover:bg-slate-800 hover:-translate-y-1 transition-all active:scale-95">
+                   <Zap className="w-5 h-5 fill-current" />
+                   Attendance Check-In
+                </Link>
+                <Link to="/my-dues" className="inline-flex items-center gap-3 bg-white text-slate-900 border-2 border-slate-900 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-900 hover:text-white hover:-translate-y-1 transition-all active:scale-95">
+                   <CreditCard className="w-5 h-5" />
+                   Stewardship Ledger
+                </Link>
+             </div>
           </div>
         </div>
 
@@ -522,25 +550,86 @@ function MemberCompactCard({ to, title, value, subtitle, icon, color, accent }: 
 
 function PublicHero() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
-       <div className="max-w-4xl w-full text-center space-y-8">
-          <div className="inline-flex bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest">
-             PresbyYouth Management System
+    <div className="min-h-screen flex items-center justify-center p-6 bg-white overflow-hidden relative">
+       {/* Background Decorative Elements */}
+       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.2, 1],
+              rotate: [0, 90, 0],
+            }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            className="absolute -top-64 -right-64 w-[500px] h-[500px] bg-blue-50 rounded-full blur-[100px] opacity-60"
+          />
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.1, 1],
+              rotate: [0, -45, 0],
+            }}
+            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+            className="absolute -bottom-32 -left-32 w-[400px] h-[400px] bg-red-50 rounded-full blur-[80px] opacity-40"
+          />
+       </div>
+
+       <div className="max-w-4xl w-full text-center space-y-12 relative z-10">
+          <div className="space-y-6">
+             <motion.div 
+               initial={{ opacity: 0, y: 20 }}
+               animate={{ opacity: 1, y: 0 }}
+               className="inline-flex bg-slate-900 text-white px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.3em] shadow-xl shadow-slate-900/10"
+             >
+                PresbyYouth Fellowship
+             </motion.div>
+             <motion.h1 
+               initial={{ opacity: 0, y: 20 }}
+               animate={{ opacity: 1, y: 0 }}
+               transition={{ delay: 0.1 }}
+               className="text-6xl md:text-8xl font-black text-slate-900 tracking-tighter leading-[0.9]"
+             >
+                Fellowship <br />
+                <span className="text-blue-700">Simplified.</span>
+             </motion.h1>
+             <motion.p 
+               initial={{ opacity: 0, y: 20 }}
+               animate={{ opacity: 1, y: 0 }}
+               transition={{ delay: 0.2 }}
+               className="text-lg text-slate-500 font-medium max-w-xl mx-auto leading-relaxed"
+             >
+                A premium management system for the modern church. 
+                Track growth, manage dues, and stay connected with your fellowship.
+             </motion.p>
           </div>
-          <h1 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-tight">
-             Keep fellowship simple, warm, and within reach.
-          </h1>
-          <p className="text-xl text-slate-500 font-medium max-w-2xl mx-auto">
-             Manage attendance, follow membership growth, and handle stewardship in one premium mobile-first experience.
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-             <Link to="/login" className="px-10 py-5 bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-900/20 hover:bg-blue-800 transition-all active:scale-95">
-                Get Started
+
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-6"
+          >
+             <Link to="/login" className="w-full sm:w-auto px-12 py-5 bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl shadow-blue-900/30 hover:bg-blue-800 hover:-translate-y-1 transition-all active:scale-95">
+                Join the Mission
              </Link>
-             <Link to="/directory" className="px-10 py-5 bg-white text-slate-700 border border-slate-100 rounded-2xl font-black uppercase tracking-widest text-sm shadow-sm hover:bg-slate-50 transition-all active:scale-95">
-                Browse Members
+             <Link to="/directory" className="w-full sm:w-auto px-12 py-5 bg-white text-slate-900 border-2 border-slate-900 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-900 hover:text-white transition-all active:scale-95">
+                Public Directory
              </Link>
-          </div>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="pt-12 flex items-center justify-center gap-12"
+          >
+             <div className="text-left">
+                <p className="text-2xl font-black text-slate-900 tracking-tight">500+</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Members</p>
+             </div>
+             <div className="w-px h-8 bg-slate-100"></div>
+             <div className="text-left">
+                <p className="text-2xl font-black text-slate-900 tracking-tight">100%</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Digital Records</p>
+             </div>
+          </motion.div>
        </div>
     </div>
   );
