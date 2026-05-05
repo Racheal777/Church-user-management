@@ -1,0 +1,197 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MaritalStatus {
+  single
+  married
+  divorced
+  widowed
+}
+
+enum MemberRole {
+  president
+  vice_president
+  secretary
+  financial_secretary
+  team_lead
+  member
+}
+
+enum CheckInMethod {
+  self
+  manual
+}
+
+enum PaymentMethod {
+  cash
+  momo
+}
+
+enum PaymentStatus {
+  pending
+  confirmed
+  failed
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  MARK_PRESENT
+  RECORD_PAYMENT
+}
+
+model Branch {
+  id                 String              @id @default(uuid()) @db.Uuid
+  name               String
+  location           String
+  created_at         DateTime            @default(now())
+  members            Member[]
+  teams              Team[]
+  attendanceSessions AttendanceSession[]
+}
+
+model Team {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  color      String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  branch_id  String?  @db.Uuid
+  branch     Branch?  @relation(fields: [branch_id], references: [id])
+  members    Member[]
+
+  @@unique([name, branch_id])
+}
+
+model Member {
+  id                         String              @id @default(uuid()) @db.Uuid
+  first_name                 String
+  last_name                  String
+  phone_number               String              @unique
+  whatsapp_number            String?
+  email                      String?
+  date_of_birth              DateTime?
+  marital_status             MaritalStatus?
+  date_joined                DateTime?
+  profile_photo_url          String?
+  role                       MemberRole          @default(member)
+  team_id                    String?             @db.Uuid
+  team                       Team?               @relation(fields: [team_id], references: [id])
+  is_active                  Boolean             @default(true)
+  created_at                 DateTime            @default(now())
+  updated_at                 DateTime            @updatedAt
+  created_by                 String?             @db.Uuid
+  creator                    Member?             @relation("MemberCreator", fields: [created_by], references: [id])
+  createdMembers             Member[]            @relation("MemberCreator")
+  branch_id                  String?             @db.Uuid
+  branch                     Branch?             @relation(fields: [branch_id], references: [id])
+  attendanceSessionsCreated  AttendanceSession[] @relation("AttendanceSessionCreator")
+  attendanceRecords          AttendanceRecord[]  @relation("AttendanceMember")
+  attendanceRecordsMarked    AttendanceRecord[]  @relation("AttendanceMarker")
+  duesPayments               DuesPayment[]       @relation("DuesMember")
+  duesPaymentsRecorded       DuesPayment[]       @relation("DuesRecorder")
+  otpsRequested              Otp[]               @relation("OtpMember")
+  refreshTokens              RefreshToken[]
+  auditLogsActed             AuditLog[]          @relation("AuditActor")
+
+  @@index([branch_id])
+  @@index([team_id])
+}
+
+model AttendanceSession {
+  id               String             @id @default(uuid()) @db.Uuid
+  meeting_date     DateTime
+  totp_secret      String
+  window_open_at   DateTime
+  window_close_at  DateTime?
+  is_open          Boolean            @default(true)
+  created_by       String             @db.Uuid
+  createdBy        Member             @relation("AttendanceSessionCreator", fields: [created_by], references: [id])
+  created_at       DateTime           @default(now())
+  branch_id        String?            @db.Uuid
+  branch           Branch?            @relation(fields: [branch_id], references: [id])
+  attendanceRecords AttendanceRecord[]
+
+  @@index([branch_id, is_open])
+}
+
+model AttendanceRecord {
+  id              String          @id @default(uuid()) @db.Uuid
+  session_id      String          @db.Uuid
+  session         AttendanceSession @relation(fields: [session_id], references: [id], onDelete: Cascade)
+  member_id       String          @db.Uuid
+  member          Member          @relation("AttendanceMember", fields: [member_id], references: [id])
+  check_in_time   DateTime
+  check_in_method CheckInMethod
+  marked_by       String?         @db.Uuid
+  markedBy        Member?         @relation("AttendanceMarker", fields: [marked_by], references: [id])
+  created_at      DateTime        @default(now())
+
+  @@unique([session_id, member_id])
+  @@index([member_id, check_in_time])
+}
+
+model DuesPayment {
+  id                 String        @id @default(uuid()) @db.Uuid
+  member_id          String        @db.Uuid
+  member             Member        @relation("DuesMember", fields: [member_id], references: [id])
+  amount             Decimal       @db.Decimal(10, 2)
+  week_of            DateTime
+  payment_method     PaymentMethod?
+  payment_status     PaymentStatus @default(pending)
+  paystack_reference String?
+  recorded_by        String?       @db.Uuid
+  recordedBy         Member?       @relation("DuesRecorder", fields: [recorded_by], references: [id])
+  payment_date       DateTime?
+  created_at         DateTime      @default(now())
+
+  @@unique([member_id, week_of])
+  @@index([week_of, payment_status])
+}
+
+model Otp {
+  id           String    @id @default(uuid()) @db.Uuid
+  phone_number String
+  otp_code     String
+  expires_at   DateTime
+  used         Boolean   @default(false)
+  created_at   DateTime  @default(now())
+  member_id    String?   @db.Uuid
+  member       Member?   @relation("OtpMember", fields: [member_id], references: [id])
+
+  @@index([phone_number, created_at])
+}
+
+model AuditLog {
+  id          String      @id @default(uuid()) @db.Uuid
+  actor_id    String      @db.Uuid
+  actor       Member      @relation("AuditActor", fields: [actor_id], references: [id])
+  action      AuditAction
+  entity_type String
+  entity_id   String      @db.Uuid
+  changes     Json
+  ip_address  String
+  created_at  DateTime    @default(now())
+
+  @@index([entity_type, entity_id])
+  @@index([actor_id, created_at])
+}
+
+model RefreshToken {
+  id          String   @id @default(uuid()) @db.Uuid
+  member_id   String   @db.Uuid
+  member      Member   @relation(fields: [member_id], references: [id], onDelete: Cascade)
+  token_hash  String   @unique
+  expires_at  DateTime
+  created_at  DateTime @default(now())
+  last_used_at DateTime?
+  user_agent  String?
+  ip_address  String?
+}

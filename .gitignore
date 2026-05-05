@@ -1,0 +1,16 @@
+node_modules
+dist
+coverage
+.DS_Store
+.env
+.env.local
+.env.*.local
+frontend/node_modules
+frontend/dist
+backend/node_modules
+backend/dist
+backend/generated
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+backend/prisma/test.db
+backend/prisma/test.db-journal
