@@ -174,7 +174,7 @@ export function LoginPage() {
                         <ArrowRight className="w-4 h-4" />
                       </button>
 
-                      {import.meta.env.DEV && (
+                      {(import.meta.env.DEV || import.meta.env.VITE_DEV_AUTH_BYPASS_ENABLED === "true") && (
                         <button 
                           className="w-full bg-transparent hover:bg-slate-50 text-slate-300 py-3 rounded-xl font-black uppercase tracking-[0.2em] text-[9px] transition-all active:scale-95 flex items-center justify-center gap-2"
                           disabled={submitting || !normalizedPhoneNumber} 
