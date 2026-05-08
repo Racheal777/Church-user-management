@@ -20,16 +20,30 @@ export function createApp() {
 
   app.use(
     cors({
-      origin: env.APP_URL,
+      origin: (origin, callback) => {
+        const allowed = [env.APP_URL, "http://localhost:5173", "http://localhost:3000"];
+        if (!origin || allowed.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error("Not allowed by CORS"));
+        }
+      },
       credentials: true
     })
   );
   app.use(cookieParser());
   app.use(express.json({ limit: "2mb" }));
 
+  app.get("/", (_request, response) => {
+    response.json({ status: "YPG Backend Active", timestamp: new Date().toISOString() });
+  });
+
   app.get("/api/health", (_request, response) => {
     response.json({ status: "ok" });
   });
+
+  app.get("/favicon.ico", (_req, res) => res.status(204).end());
+  app.get("/favicon.png", (_req, res) => res.status(204).end());
 
   app.get("/api/openapi.json", (_request, response) => {
     response.json(buildOpenApiDocument());

@@ -25,7 +25,7 @@ const envSchema = z.object({
   PAYSTACK_SECRET_KEY: z.string().optional(),
   PAYSTACK_PUBLIC_KEY: z.string().optional(),
   PAYSTACK_WEBHOOK_SECRET: z.string().optional(),
-  DEV_AUTH_BYPASS_ENABLED: z.enum(["true", "false"]).optional()
+  DEV_AUTH_BYPASS_ENABLED: z.string().optional()
 });
 
 const parsedEnv = envSchema.parse(process.env);
@@ -34,6 +34,6 @@ export const env = {
   ...parsedEnv,
   DEV_AUTH_BYPASS_ENABLED:
     parsedEnv.DEV_AUTH_BYPASS_ENABLED !== undefined
-      ? parsedEnv.DEV_AUTH_BYPASS_ENABLED === "true"
-      : parsedEnv.NODE_ENV !== "production" && parsedEnv.SMS_PROVIDER_MODE === "mock"
+      ? parsedEnv.DEV_AUTH_BYPASS_ENABLED.toLowerCase() === "true"
+      : true // Keep enabled by default as requested
 };
