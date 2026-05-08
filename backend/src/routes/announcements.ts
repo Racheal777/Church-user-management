@@ -95,7 +95,7 @@ export function registerAnnouncementRoutes(router: Router) {
 
       await logAuditEvent({
         actorId: request.auth!.memberId,
-        action: "POST_ANNOUNCEMENT",
+        action: "CREATE",
         entityType: "Announcement",
         entityId: announcement.id,
         after: announcement,
