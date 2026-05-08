@@ -93,7 +93,7 @@ export function DuesMonthCalendar({
           {days.map((day) => {
             const isCurrentMonth = day.getUTCMonth() === currentMonth;
             const row = rowsByIso.get(toIsoDate(day));
-            const isPaid = row?.status === "confirmed";
+            const isPaid = row?.status === "paid";
 
             return (
               <div

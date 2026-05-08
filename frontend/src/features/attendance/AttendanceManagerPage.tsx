@@ -229,7 +229,7 @@ export function AttendanceManagerPage() {
                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Session Date</p>
                        <div className="flex items-center gap-2 text-slate-900 font-bold">
                           <Calendar className="w-4 h-4 text-blue-600" />
-                          {new Date(activeQuery.data.session.meetingDate).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                          {activeQuery.data?.session && new Date(activeQuery.data.session.meetingDate).toLocaleDateString(undefined, { dateStyle: 'medium' })}
                        </div>
                      </div>
                      <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 group transition-all hover:bg-white hover:shadow-lg hover:border-blue-100 relative overflow-hidden">
@@ -237,12 +237,12 @@ export function AttendanceManagerPage() {
                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Current Count</p>
                          <div className="flex items-center gap-2 text-slate-900 font-bold">
                             <Users className="w-4 h-4 text-blue-600" />
-                            {activeQuery.data.session.attendeeCount} Members
+                            {activeQuery.data?.session?.attendeeCount} Members
                          </div>
                        </div>
                        {/* Mini indicator for new check-in */}
                        <AnimatePresence>
-                          {activeQuery.data.session.attendeeCount > 0 && (
+                          {(activeQuery.data?.session?.attendeeCount ?? 0) > 0 && (
                             <motion.div 
                               initial={{ scale: 0, opacity: 0 }}
                               animate={{ scale: 1, opacity: 1 }}

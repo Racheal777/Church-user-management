@@ -315,7 +315,7 @@ export function AdminDashboard() {
                       </p>
                       {activeSession?.session ? (
                         <div className="space-y-6">
-                          <h2 className="text-4xl font-black tracking-tight">{formatCountdown(activeSession.secondsRemaining)}</h2>
+                          <h2 className="text-4xl font-black tracking-tight">{formatCountdown(activeSession.secondsRemaining ?? 0)}</h2>
                           <p className="text-xs font-bold text-blue-100/60 uppercase tracking-widest">{activeSession.session.attendeeCount} Members Checked In</p>
                           <div className="flex gap-3">
                              <Link to="/attendance" className="flex-1 inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all">

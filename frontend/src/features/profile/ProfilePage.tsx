@@ -69,7 +69,7 @@ export function ProfilePage() {
 
   async function handlePhotoUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-    if (!file || !accessToken) return;
+    if (!file || !accessToken || !member) return;
 
     if (file.size > 5 * 1024 * 1024) {
       toast.error({ title: "File too large", description: "Please upload an image smaller than 5MB." });

@@ -115,6 +115,22 @@ export type DuesReport = {
     activeMembersCount: number;
     currentYear: number;
   };
+  topPayers: Array<{
+    memberId: string;
+    firstName: string;
+    lastName: string;
+    amountPaid: number;
+    profilePhotoUrl: string | null;
+  }>;
+  alerts: {
+    twoMonthsOutstanding: Array<{
+      memberId: string;
+      firstName: string;
+      lastName: string;
+      outstandingWeeks: number;
+      amountOwed: number;
+    }>;
+  };
 };
 
 export type Announcement = {
@@ -357,6 +373,9 @@ export const api = {
       signature: string | null;
       publicId: string;
     }>("/api/members/upload-signature", { method: "POST" }, accessToken);
+  },
+  signImageUpload(folder: string, accessToken: string) {
+    return this.getUploadSignature(accessToken);
   },
   getAnnouncements(category?: string, accessToken?: string | null) {
     const suffix = category ? `?category=${category}` : "";

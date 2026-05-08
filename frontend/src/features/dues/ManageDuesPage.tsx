@@ -77,7 +77,7 @@ export function ManageDuesPage() {
   
   const outstandingWeeks = useMemo(
     () =>
-      [...(selectedMemberDuesQuery.data?.ledger.filter((entry) => entry.status !== "confirmed") ?? [])].sort(
+      [...(selectedMemberDuesQuery.data?.ledger.filter((entry) => entry.status !== "paid") ?? [])].sort(
         (left, right) => new Date(left.weekOf).getTime() - new Date(right.weekOf).getTime()
       ),
     [selectedMemberDuesQuery.data?.ledger]
@@ -227,7 +227,7 @@ export function ManageDuesPage() {
             <div className="bg-white rounded-2xl p-10 shadow-sm border border-slate-100">
                <h3 className="font-bold text-xs uppercase tracking-[0.2em] text-slate-400 mb-8">Top Payers</h3>
                <div className="space-y-4">
-                 {(reportQuery.data?.topPayers ?? []).slice(0, 3).map((payer, idx) => (
+                 {(reportQuery.data?.topPayers ?? []).slice(0, 3).map((payer: any, idx: number) => (
                     <div key={idx} className="flex items-center justify-between group">
                        <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 font-bold text-[10px]">
@@ -276,7 +276,7 @@ export function ManageDuesPage() {
                <h3 className="font-bold text-xs uppercase tracking-[0.25em] text-red-500">Critical Alerts</h3>
              </div>
              <div className="space-y-4">
-               {reportQuery.data?.alerts.twoMonthsOutstanding.slice(0, 3).map((item) => (
+                {(reportQuery.data?.alerts.twoMonthsOutstanding ?? []).slice(0, 3).map((item: any) => (
                  <div key={item.memberId} className="p-4 rounded-2xl bg-white border border-red-100 text-red-900 flex justify-between items-center shadow-sm">
                    <div className="text-xs font-bold">{item.firstName} {item.lastName}</div>
                    <div className="text-[8px] font-black bg-red-100 text-red-700 px-2 py-0.5 rounded-lg">-{item.outstandingWeeks} WKS</div>

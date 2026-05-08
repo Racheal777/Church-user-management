@@ -274,7 +274,7 @@ export function registerDuesRoutes(router: Router) {
       doc.text(`Total Outstanding: GHS ${yearSummary?.totalOutstanding}`);
       
       doc.moveDown(4);
-      doc.fontSize(8).text("YPG - Stewardship is Worship", { align: "center", color: "grey" });
+      doc.fontSize(8).fillColor("grey").text("YPG - Stewardship is Worship", { align: "center" });
 
       doc.end();
     })

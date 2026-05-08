@@ -136,7 +136,7 @@ export function registerAnnouncementRoutes(router: Router) {
 
       await logAuditEvent({
         actorId: request.auth!.memberId,
-        action: "UPDATE_ANNOUNCEMENT",
+        action: "UPDATE",
         entityType: "Announcement",
         entityId: announcement.id,
         before: existing,
@@ -167,7 +167,7 @@ export function registerAnnouncementRoutes(router: Router) {
 
       await logAuditEvent({
         actorId: request.auth!.memberId,
-        action: "DELETE_ANNOUNCEMENT",
+        action: "DELETE",
         entityType: "Announcement",
         entityId: id,
         before: existing,
