@@ -20,7 +20,7 @@ export function createApp() {
 
   app.use(
     cors({
-      origin: (origin, callback) => {
+      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
         const allowed = [env.APP_URL, "http://localhost:5173", "http://localhost:3000"];
         if (!origin || allowed.includes(origin)) {
           callback(null, true);
@@ -34,18 +34,18 @@ export function createApp() {
   app.use(cookieParser());
   app.use(express.json({ limit: "2mb" }));
 
-  app.get("/", (_request, response) => {
+  app.get("/", (_request: express.Request, response: express.Response) => {
     response.json({ status: "YPG Backend Active", timestamp: new Date().toISOString() });
   });
 
-  app.get("/api/health", (_request, response) => {
+  app.get("/api/health", (_request: express.Request, response: express.Response) => {
     response.json({ status: "ok" });
   });
 
-  app.get("/favicon.ico", (_req, res) => res.status(204).end());
-  app.get("/favicon.png", (_req, res) => res.status(204).end());
+  app.get("/favicon.ico", (_req: express.Request, res: express.Response) => res.status(204).end());
+  app.get("/favicon.png", (_req: express.Request, res: express.Response) => res.status(204).end());
 
-  app.get("/api/openapi.json", (_request, response) => {
+  app.get("/api/openapi.json", (_request: express.Request, response: express.Response) => {
     response.json(buildOpenApiDocument());
   });
   app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(buildOpenApiDocument()));
