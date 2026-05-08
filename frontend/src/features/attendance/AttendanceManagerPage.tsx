@@ -17,7 +17,7 @@ import {
 
 import { Loader } from "../../components/Loader";
 import { ApiError, api } from "../../lib/api";
-import { useAuth } from "../../providers/AuthProvider";
+import { useAuth } from "../../providers/AuthContext";
 import { useToast } from "../../providers/ToastProvider";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";

@@ -15,7 +15,7 @@ import clsx from "clsx";
 import { useState, type ComponentType } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 
-import { useAuth } from "../providers/AuthProvider";
+import { useAuth } from "../providers/AuthContext";
 import "../styles/dashboard.css";
 
 export function SidebarLayout() {
@@ -63,7 +63,7 @@ export function SidebarLayout() {
         <Link to="/" className="dashboard-brand">
           <div className="dashboard-brand-mark">PY</div>
           <div>
-            <p className="dashboard-brand-title">PresbyYouth</p>
+            <p className="dashboard-brand-title">YPG</p>
             <p className="dashboard-brand-subtitle">Admin Dashboard</p>
           </div>
         </Link>
@@ -89,7 +89,7 @@ export function SidebarLayout() {
         <Link to="/" className="dashboard-brand">
           <div className="dashboard-brand-mark">PY</div>
           <div>
-            <p className="dashboard-brand-title">PresbyYouth</p>
+            <p className="dashboard-brand-title">YPG</p>
             <p className="dashboard-brand-subtitle">Admin</p>
           </div>
         </Link>

@@ -119,14 +119,15 @@ export function registerAttendanceRoutes(router: Router) {
   router.get(
     "/sessions/active",
     requireAuth,
-    requireRoles(attendanceManagers),
     asyncHandler(async (request, response) => {
       const session = await findActiveSession(request.auth!.branchId);
+      
       if (!session) {
-        throw new ApiError(404, "No active attendance session.");
+        return response.json({ isActive: false, session: null, checkedInCount: 0 });
       }
 
       response.json({
+        isActive: true,
         session: {
           id: session.id,
           meetingDate: session.meeting_date,

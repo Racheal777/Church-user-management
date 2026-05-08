@@ -45,6 +45,14 @@ enum AuditAction {
   DELETE
   MARK_PRESENT
   RECORD_PAYMENT
+  POST_ANNOUNCEMENT
+}
+
+enum AnnouncementCategory {
+  event
+  notice
+  vacancy
+  program
 }
 
 model Branch {
@@ -55,6 +63,7 @@ model Branch {
   members            Member[]
   teams              Team[]
   attendanceSessions AttendanceSession[]
+  announcements      Announcement[]
 }
 
 model Team {
@@ -100,6 +109,7 @@ model Member {
   otpsRequested              Otp[]               @relation("OtpMember")
   refreshTokens              RefreshToken[]
   auditLogsActed             AuditLog[]          @relation("AuditActor")
+  announcements              Announcement[]      @relation("AnnouncementPoster")
 
   @@index([branch_id])
   @@index([team_id])
@@ -194,4 +204,23 @@ model RefreshToken {
   last_used_at DateTime?
   user_agent  String?
   ip_address  String?
+}
+
+model Announcement {
+  id              String               @id @default(uuid()) @db.Uuid
+  title           String
+  body            String
+  category        AnnouncementCategory
+  event_date      DateTime?
+  event_time      String?
+  venue           String?
+  posted_by       String               @db.Uuid
+  postedBy        Member               @relation("AnnouncementPoster", fields: [posted_by], references: [id])
+  created_at      DateTime             @default(now())
+  updated_at      DateTime             @updatedAt
+  branch_id       String?              @db.Uuid
+  branch          Branch?              @relation(fields: [branch_id], references: [id])
+
+  @@index([category])
+  @@index([branch_id])
 }

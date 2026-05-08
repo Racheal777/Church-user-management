@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 
 import { Loader } from "../../components/Loader";
 import { api } from "../../lib/api";
-import { useAuth } from "../../providers/AuthProvider";
+import { useAuth } from "../../providers/AuthContext";
 import { useToast } from "../../providers/ToastProvider";
 
 export function CriticalFollowupsPage() {

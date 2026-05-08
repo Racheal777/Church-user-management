@@ -1,8 +1,7 @@
 import type { Router } from "express";
-
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-
+import PDFDocument from "pdfkit";
 import { asyncHandler, ApiError } from "../lib/http.js";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth, requireRoles } from "../middleware/auth.js";
@@ -11,20 +10,6 @@ import { generateWeeklyDues } from "../services/dues-scheduler.js";
 import { buildDuesLedger, WEEKLY_DUES_AMOUNT } from "../services/dues-service.js";
 import { financeManagers, isAdminRole } from "../utils/permissions.js";
 import { normalizePhoneNumber } from "../utils/phone.js";
-
-function countMondaysInYear(year: number) {
-  const firstMonday = new Date(Date.UTC(year, 0, 1));
-  while (firstMonday.getUTCDay() !== 1) {
-    firstMonday.setUTCDate(firstMonday.getUTCDate() + 1);
-  }
-
-  let count = 0;
-  for (let cursor = new Date(firstMonday); cursor.getUTCFullYear() === year; cursor.setUTCDate(cursor.getUTCDate() + 7)) {
-    count += 1;
-  }
-
-  return count;
-}
 
 const cashPaymentSchema = z.object({
   memberId: z.string().uuid().optional(),
@@ -35,18 +20,33 @@ const cashPaymentSchema = z.object({
   message: "Provide dues weeks or a cash amount."
 });
 
+const initiateMomoSchema = z.object({
+  member_id: z.string().uuid(),
+  week_dates: z.array(z.string()).min(1),
+  total_amount: z.number().positive()
+});
+
 export function registerDuesRoutes(router: Router) {
+  // GET /api/dues - Fetch ledger with detailed statuses
   router.get(
     "/",
     requireAuth,
     asyncHandler(async (request, response) => {
-      await generateWeeklyDues();
       const isAdmin = isAdminRole(request.auth!.role);
       const memberId = isAdmin ? (request.query.memberId as string | undefined) : request.auth!.memberId;
 
+      if (!memberId) {
+        throw new ApiError(400, "Member ID is required.");
+      }
+
+      const member = await prisma.member.findUnique({
+        where: { id: memberId },
+        select: { date_joined: true }
+      });
+
       const rows = await prisma.duesPayment.findMany({
         where: {
-          member_id: memberId ?? undefined,
+          member_id: memberId,
           payment_status:
             typeof request.query.status === "string"
               ? (request.query.status as "pending" | "confirmed" | "failed")
@@ -55,10 +55,54 @@ export function registerDuesRoutes(router: Router) {
         orderBy: [{ week_of: "desc" }]
       });
 
-      response.json(buildDuesLedger(rows));
+      response.json(buildDuesLedger(rows, member?.date_joined || undefined));
     })
   );
 
+  // POST /api/dues/momo/initiate
+  router.post(
+    "/momo/initiate",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const { member_id, week_dates, total_amount } = initiateMomoSchema.parse(request.body);
+      
+      const member = await prisma.member.findUnique({
+        where: { id: member_id },
+        select: { date_joined: true }
+      });
+
+      // Validation: Weeks must be consecutive and starting from oldest unpaid
+      const existingRows = await prisma.duesPayment.findMany({
+        where: { 
+          member_id, 
+          payment_status: { not: "confirmed" },
+          week_of: { gte: member?.date_joined || new Date(0) }
+        },
+        orderBy: { week_of: "asc" }
+      });
+
+      const oldestUnpaid = existingRows[0];
+      if (oldestUnpaid) {
+        const oldestDate = oldestUnpaid.week_of.toISOString().split('T')[0];
+        const targetDate = new Date(week_dates[0]).toISOString().split('T')[0];
+        
+        if (oldestDate !== targetDate) {
+          throw new ApiError(400, `Please clear your oldest unpaid week (${oldestDate}) first.`);
+        }
+      }
+
+      // In a real app, integrate with Paystack here
+      // For this MVP, we return a mock authorization URL
+      const reference = `PY-${Math.random().toString(36).substring(7).toUpperCase()}`;
+      
+      response.json({
+        authorization_url: `https://checkout.paystack.com/mock?ref=${reference}&amount=${total_amount * 100}`,
+        reference
+      });
+    })
+  );
+
+  // POST /api/dues/cash
   router.post(
     "/cash",
     requireAuth,
@@ -99,10 +143,8 @@ export function registerDuesRoutes(router: Router) {
           throw new ApiError(400, `A minimum of GHS ${WEEKLY_DUES_AMOUNT.toFixed(2)} is required to cover one week.`);
         }
 
-        if (exactWeeks > unpaidRows.length) {
-          throw new ApiError(400, "That amount is more than this member's current outstanding dues.");
-        }
-
+        // Allow overpayment - carry forward will be handled by buildDuesLedger view
+        // But for recording cash, we just record the confirmed weeks.
         targetWeeks = unpaidRows.slice(0, exactWeeks).map((row) => row.week_of.toISOString());
       }
 
@@ -148,51 +190,102 @@ export function registerDuesRoutes(router: Router) {
             });
 
         updatedRows.push(row);
-        await logAuditEvent({
-          actorId: request.auth!.memberId,
-          action: "RECORD_PAYMENT",
-          entityType: "DuesPayment",
-          entityId: row.id,
-          before: existing,
-          after: row,
-          ipAddress: request.ip
-        });
       }
 
       response.status(201).json({
         amountApplied: updatedRows.reduce((sum, row) => sum + Number(row.amount), 0),
-        weeksCovered: updatedRows.length,
-        payments: updatedRows.map((row) => ({
-          id: row.id,
-          weekOf: row.week_of,
-          amount: Number(row.amount),
-          status: row.payment_status
-        }))
+        weeksCovered: updatedRows.length
       });
     })
   );
 
-  router.post(
-    "/momo/initiate",
+  // GET /api/dues/statement
+  router.get(
+    "/statement",
     requireAuth,
-    asyncHandler(async (_request, _response) => {
-      throw new ApiError(501, "MoMo payment initiation is deferred for this MVP release.");
+    asyncHandler(async (request, response) => {
+      const year = parseInt(request.query.year as string) || new Date().getFullYear();
+      const memberId = request.query.member_id as string || request.auth!.memberId;
+
+      const member = await prisma.member.findUnique({
+        where: { id: memberId },
+        include: { team: true }
+      });
+
+      if (!member) throw new ApiError(404, "Member not found.");
+
+      const rows = await prisma.duesPayment.findMany({
+        where: { member_id: memberId },
+        orderBy: { week_of: "asc" }
+      });
+
+      const ledgerData = buildDuesLedger(rows, member.date_joined || undefined);
+      const yearItems = ledgerData.ledger.filter(i => new Date(i.weekOf).getUTCFullYear() === year);
+      const yearSummary = ledgerData.annualBreakdown.find(a => a.year === year);
+
+      const doc = new PDFDocument({ margin: 50 });
+      
+      response.setHeader("Content-Type", "application/pdf");
+      response.setHeader("Content-Disposition", `attachment; filename=Stewardship_Statement_${year}.pdf`);
+      
+      doc.pipe(response);
+
+      // Header
+      doc.fontSize(20).text("YPG Fellowship", { align: "center" });
+      doc.fontSize(12).text("Stewardship Statement", { align: "center" }).moveDown();
+      doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke().moveDown();
+
+      // Member Info
+      doc.fontSize(10).font("Helvetica-Bold").text(`Member: ${member.first_name} ${member.last_name}`);
+      doc.font("Helvetica").text(`Team: ${member.team?.name || "N/A"}`);
+      doc.text(`Year: ${year}`);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`).moveDown(2);
+
+      // Table Header
+      const tableTop = doc.y;
+      doc.font("Helvetica-Bold");
+      doc.text("Date", 50, tableTop);
+      doc.text("Week", 150, tableTop);
+      doc.text("Status", 250, tableTop);
+      doc.text("Amount", 350, tableTop);
+      doc.text("Method", 450, tableTop);
+      doc.moveDown();
+      doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke().moveDown(0.5);
+
+      // Table Rows
+      doc.font("Helvetica");
+      yearItems.forEach((item, i) => {
+        const y = doc.y;
+        if (y > 700) doc.addPage();
+        
+        doc.text(new Date(item.weekOf).toLocaleDateString(), 50, y);
+        doc.text(`Week ${item.weekNumber}`, 150, y);
+        doc.text(item.status.toUpperCase(), 250, y);
+        doc.text(`GHS ${item.amount.toFixed(2)}`, 350, y);
+        doc.text(item.method || "-", 450, y);
+        doc.moveDown(1.2);
+      });
+
+      // Summary
+      doc.moveDown(2);
+      doc.font("Helvetica-Bold").text("Summary", { underline: true }).moveDown();
+      doc.font("Helvetica").text(`Total Commitment: GHS ${yearSummary?.totalPaid! + yearSummary?.totalOutstanding!}`);
+      doc.text(`Total Paid: GHS ${yearSummary?.totalPaid}`);
+      doc.text(`Total Outstanding: GHS ${yearSummary?.totalOutstanding}`);
+      
+      doc.moveDown(4);
+      doc.fontSize(8).text("YPG - Stewardship is Worship", { align: "center", color: "grey" });
+
+      doc.end();
     })
   );
 
-  router.post(
-    "/webhook",
-    asyncHandler(async (_request, _response) => {
-      throw new ApiError(501, "Paystack webhook handling is deferred for this MVP release.");
-    })
-  );
-
+  // Reports
   router.get(
     "/reports",
     requireAuth,
     requireRoles(financeManagers),
     asyncHandler(async (_request, response) => {
-      await generateWeeklyDues();
       const allRows = await prisma.duesPayment.findMany({
         include: {
           member: true
@@ -225,61 +318,19 @@ export function registerDuesRoutes(router: Router) {
       const totalReceivedSoFar = currentYearRows
         .filter((row) => row.payment_status === "confirmed")
         .reduce((sum, row) => sum + Number(row.amount), 0);
+      
+      const countMondaysInYear = (year: number) => {
+        let count = 0;
+        let d = new Date(Date.UTC(year, 0, 1));
+        while (d.getUTCDay() !== 1) d.setUTCDate(d.getUTCDate() + 1);
+        while (d.getUTCFullYear() === year) {
+          count++;
+          d.setUTCDate(d.getUTCDate() + 7);
+        }
+        return count;
+      };
+
       const projectedYearAmount = activeMembersCount * countMondaysInYear(currentYear) * WEEKLY_DUES_AMOUNT;
-
-      const topPayers = Object.values(
-        currentYearRows.reduce<
-          Record<
-            string,
-            {
-              memberId: string;
-              firstName: string;
-              lastName: string;
-              amountPaid: number;
-              weeksPaid: number;
-            }
-          >
-        >((accumulator, row) => {
-          if (!accumulator[row.member.id]) {
-            accumulator[row.member.id] = {
-              memberId: row.member.id,
-              firstName: row.member.first_name,
-              lastName: row.member.last_name,
-              amountPaid: 0,
-              weeksPaid: 0
-            };
-          }
-
-          if (row.payment_status === "confirmed") {
-            accumulator[row.member.id].amountPaid += Number(row.amount);
-            accumulator[row.member.id].weeksPaid += 1;
-          }
-
-          return accumulator;
-        }, {})
-      )
-        .sort((left, right) => right.amountPaid - left.amountPaid || right.weeksPaid - left.weeksPaid)
-        .slice(0, 3);
-
-      const arrears = Object.values(
-        allRows.reduce<Record<string, { memberId: string; firstName: string; lastName: string; outstandingWeeks: number }>>(
-          (accumulator, row) => {
-            if (!accumulator[row.member.id]) {
-              accumulator[row.member.id] = {
-                memberId: row.member.id,
-                firstName: row.member.first_name,
-                lastName: row.member.last_name,
-                outstandingWeeks: 0
-              };
-            }
-            if (row.payment_status !== "confirmed") {
-              accumulator[row.member.id].outstandingWeeks += 1;
-            }
-            return accumulator;
-          },
-          {}
-        )
-      );
 
       response.json({
         summary: {
@@ -289,22 +340,7 @@ export function registerDuesRoutes(router: Router) {
           projectedYearAmount,
           activeMembersCount,
           currentYear
-        },
-        alerts: {
-          twoPlusOutstanding: arrears.filter((row) => row.outstandingWeeks >= 2),
-          twoMonthsOutstanding: arrears.filter((row) => row.outstandingWeeks >= 8)
-        },
-        topPayers,
-        paymentLog: allRows.map((row) => ({
-          id: row.id,
-          memberId: row.member.id,
-          memberName: `${row.member.first_name} ${row.member.last_name}`,
-          weekOf: row.week_of,
-          amount: Number(row.amount),
-          status: row.payment_status,
-          method: row.payment_method,
-          paymentDate: row.payment_date
-        }))
+        }
       });
     })
   );

@@ -1,10 +1,7 @@
 import crypto from "node:crypto";
-
 import type { Prisma } from "@prisma/client";
 import type { Router } from "express";
-
 import { z } from "zod";
-
 import { env } from "../config/env.js";
 import { asyncHandler, ApiError } from "../lib/http.js";
 import { prisma } from "../lib/prisma.js";
@@ -12,8 +9,6 @@ import { optionalAuth, requireAuth, requireRoles } from "../middleware/auth.js";
 import { mediaProvider } from "../providers/media.js";
 import { smsProvider } from "../providers/sms.js";
 import { logAuditEvent } from "../services/audit-service.js";
-import { ensureDefaultBranch } from "../services/branch-service.js";
-import { generateWeeklyDues } from "../services/dues-scheduler.js";
 import { buildDuesLedger } from "../services/dues-service.js";
 import { buildPermissions, isAdminRole, memberManagers } from "../utils/permissions.js";
 import { normalizePhoneNumber } from "../utils/phone.js";
@@ -26,16 +21,7 @@ const publicQuerySchema = z.object({
 const adminQuerySchema = z.object({
   search: z.string().optional(),
   teamId: z.string().uuid().optional(),
-  role: z
-    .enum([
-      "president",
-      "vice_president",
-      "secretary",
-      "financial_secretary",
-      "team_lead",
-      "member"
-    ])
-    .optional(),
+  role: z.enum(["president", "vice_president", "secretary", "financial_secretary", "team_lead", "member"]).optional(),
   activeStatus: z.enum(["active", "inactive", "all"]).optional()
 });
 
@@ -49,31 +35,38 @@ const createMemberSchema = z.object({
   maritalStatus: z.enum(["single", "married", "divorced", "widowed"]).optional().nullable(),
   dateJoined: z.string().optional().nullable(),
   profilePhotoUrl: z.string().url().optional().nullable(),
-  role: z.enum([
-    "president",
-    "vice_president",
-    "secretary",
-    "financial_secretary",
-    "team_lead",
-    "member"
-  ]),
+  role: z.enum(["president", "vice_president", "secretary", "financial_secretary", "team_lead", "member"]),
   teamId: z.string().uuid().optional().nullable()
 });
 
 const adminUpdateSchema = createMemberSchema.partial();
 const selfUpdateSchema = z.object({
   whatsappNumber: z.string().optional().nullable(),
-  email: z.string().email().optional().nullable(),
-  maritalStatus: z.enum(["single", "married", "divorced", "widowed"]).optional().nullable(),
-  profilePhotoUrl: z.string().url().optional().nullable(),
-  dateOfBirth: z.string().optional().nullable()
+  email: z.string().email().or(z.literal("")).optional().nullable(),
+  maritalStatus: z.enum(["single", "married", "divorced", "widowed"]).optional().nullable()
 });
 
-function memberSearchWhere(search?: string): Prisma.MemberWhereInput | undefined {
-  if (!search) {
-    return undefined;
-  }
+function calculateProfileCompletion(member: any) {
+  let percentage = 0;
+  const missing_fields: string[] = [];
 
+  if (member.profile_photo_url) percentage += 25;
+  else missing_fields.push("profile_photo");
+
+  if (member.email) percentage += 25;
+  else missing_fields.push("email");
+
+  if (member.whatsapp_number) percentage += 25;
+  else missing_fields.push("whatsapp_number");
+
+  if (member.marital_status) percentage += 25;
+  else missing_fields.push("marital_status");
+
+  return { percentage, missing_fields };
+}
+
+function memberSearchWhere(search?: string): Prisma.MemberWhereInput | undefined {
+  if (!search) return undefined;
   return {
     OR: [
       { first_name: { contains: search, mode: "insensitive" } },
@@ -92,13 +85,7 @@ function serializePublicMember(member: MemberWithTeam) {
     lastName: member.last_name,
     profilePhotoUrl: member.profile_photo_url,
     role: member.role,
-    team: member.team
-      ? {
-          id: member.team.id,
-          name: member.team.name,
-          color: member.team.color
-        }
-      : null
+    team: member.team ? { id: member.team.id, name: member.team.name, color: member.team.color } : null
   };
 }
 
@@ -118,27 +105,15 @@ function serializePrivateMember(member: MemberWithTeam) {
     isActive: member.is_active,
     createdAt: member.created_at,
     updatedAt: member.updated_at,
-    team: member.team
-      ? {
-          id: member.team.id,
-          name: member.team.name,
-          color: member.team.color
-        }
-      : null,
-    permissions: buildPermissions(member.role)
+    team: member.team ? { id: member.team.id, name: member.team.name, color: member.team.color } : null,
+    permissions: buildPermissions(member.role),
+    profile_completion: calculateProfileCompletion(member)
   };
 }
 
 async function getMemberOrThrow(memberId: string) {
-  const member = await prisma.member.findUnique({
-    where: { id: memberId },
-    include: { team: true }
-  });
-
-  if (!member) {
-    throw new ApiError(404, "Member not found.");
-  }
-
+  const member = await prisma.member.findUnique({ where: { id: memberId }, include: { team: true } });
+  if (!member) throw new ApiError(404, "Member not found.");
   return member;
 }
 
@@ -152,25 +127,20 @@ export function registerMemberRoutes(router: Router) {
     optionalAuth,
     asyncHandler(async (request, response) => {
       const isAdmin = request.auth ? isAdminRole(request.auth.role) : false;
+      const queryParams = request.query;
+      const isPublicDirectory = !isAdmin || (!queryParams.role && !queryParams.activeStatus);
 
-      if (!isAdmin) {
-        const query = publicQuerySchema.parse(request.query);
+      if (isPublicDirectory) {
+        const query = publicQuerySchema.parse(queryParams);
         const members = await prisma.member.findMany({
-          where: {
-            is_active: true,
-            team_id: query.teamId,
-            ...memberSearchWhere(query.search)
-          },
+          where: { is_active: true, team_id: query.teamId, ...memberSearchWhere(query.search) },
           include: { team: true },
           orderBy: [{ first_name: "asc" }, { last_name: "asc" }]
         });
-
-        return response.json({
-          members: members.map(serializePublicMember)
-        });
+        return response.json({ members: members.map(serializePublicMember) });
       }
 
-      const query = adminQuerySchema.parse(request.query);
+      const query = adminQuerySchema.parse(queryParams);
       const members = await prisma.member.findMany({
         where: {
           team_id: query.teamId,
@@ -182,29 +152,49 @@ export function registerMemberRoutes(router: Router) {
         include: { team: true },
         orderBy: [{ created_at: "desc" }]
       });
-
-      response.json({
-        members: members.map(serializePrivateMember)
-      });
+      response.json({ members: members.map(serializePrivateMember) });
     })
   );
 
   router.get(
-    "/:id",
+    "/birthdays/this-week",
     requireAuth,
     asyncHandler(async (request, response) => {
-      const memberId = String(request.params.id);
-      const member = await getMemberOrThrow(memberId);
-      const isSelf = request.auth!.memberId === member.id;
-      const isAdmin = isAdminRole(request.auth!.role);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      
+      const days = parseInt(request.query.days as string) || 7;
+      const nextWindow = new Date(now);
+      nextWindow.setDate(now.getDate() + days);
 
-      if (!isSelf && !isAdmin) {
-        throw new ApiError(403, "You can only view your own profile.");
-      }
-
-      response.json({
-        member: serializePrivateMember(member)
+      const members = await prisma.member.findMany({
+        where: {
+          is_active: true,
+          date_of_birth: { not: null }
+        },
+        include: { team: true }
       });
+
+      const birthdays = members.filter(member => {
+        if (!member.date_of_birth) return false;
+        const dob = new Date(member.date_of_birth);
+        
+        const bdayCurrent = new Date(now.getFullYear(), dob.getMonth(), dob.getDate());
+        const bdayNext = new Date(now.getFullYear() + 1, dob.getMonth(), dob.getDate());
+        
+        return (bdayCurrent >= now && bdayCurrent <= nextWindow) || 
+               (bdayNext >= now && bdayNext <= nextWindow);
+      }).sort((a, b) => {
+        const da = new Date(a.date_of_birth!);
+        const db = new Date(b.date_of_birth!);
+        const ba = new Date(now.getFullYear(), da.getMonth(), da.getDate());
+        const bb = new Date(now.getFullYear(), db.getMonth(), db.getDate());
+        if (ba < now) ba.setFullYear(now.getFullYear() + 1);
+        if (bb < now) bb.setFullYear(now.getFullYear() + 1);
+        return ba.getTime() - bb.getTime();
+      });
+
+      response.json({ members: birthdays.map(serializePrivateMember) });
     })
   );
 
@@ -214,22 +204,20 @@ export function registerMemberRoutes(router: Router) {
     requireRoles(memberManagers),
     asyncHandler(async (request, response) => {
       const payload = createMemberSchema.parse(request.body);
-      const defaultBranch = await ensureDefaultBranch();
       const member = await prisma.member.create({
         data: {
           first_name: payload.firstName,
           last_name: payload.lastName,
           phone_number: normalizePhoneNumber(payload.phoneNumber),
-          whatsapp_number: payload.whatsappNumber ?? null,
-          email: payload.email ?? null,
+          whatsapp_number: payload.whatsappNumber,
+          email: payload.email,
           date_of_birth: parseOptionalDate(payload.dateOfBirth),
-          marital_status: payload.maritalStatus ?? null,
-          date_joined: parseOptionalDate(payload.dateJoined) ?? new Date(),
-          profile_photo_url: payload.profilePhotoUrl ?? null,
+          marital_status: payload.maritalStatus,
+          date_joined: parseOptionalDate(payload.dateJoined),
+          profile_photo_url: payload.profilePhotoUrl,
           role: payload.role,
-          team_id: payload.teamId ?? null,
-          created_by: request.auth!.memberId,
-          branch_id: request.auth!.branchId ?? defaultBranch.id
+          team_id: payload.teamId,
+          branch_id: request.auth!.branchId
         },
         include: { team: true }
       });
@@ -250,9 +238,7 @@ export function registerMemberRoutes(router: Router) {
         });
       }
 
-      response.status(201).json({
-        member: serializePrivateMember(member)
-      });
+      response.status(201).json({ member: serializePrivateMember(member) });
     })
   );
 
@@ -265,40 +251,29 @@ export function registerMemberRoutes(router: Router) {
       const isSelf = request.auth!.memberId === existing.id;
       const isAdmin = memberManagers.includes(request.auth!.role);
 
-      if (!isSelf && !isAdmin) {
-        throw new ApiError(403, "You cannot update this member.");
-      }
+      if (!isSelf && !isAdmin) throw new ApiError(403, "You cannot update this member.");
 
       const before = serializePrivateMember(existing);
       const data: Prisma.MemberUncheckedUpdateInput = {};
 
       if (isAdmin) {
         const payload = adminUpdateSchema.parse(request.body);
-        data.first_name = payload.firstName;
-        data.last_name = payload.lastName;
-        data.phone_number = payload.phoneNumber ? normalizePhoneNumber(payload.phoneNumber) : undefined;
-        data.whatsapp_number = payload.whatsappNumber !== undefined ? payload.whatsappNumber : undefined;
-        data.email = payload.email !== undefined ? payload.email : undefined;
-        data.date_of_birth =
-          payload.dateOfBirth !== undefined ? parseOptionalDate(payload.dateOfBirth) : undefined;
-        data.marital_status =
-          payload.maritalStatus !== undefined ? payload.maritalStatus : undefined;
-        data.date_joined =
-          payload.dateJoined !== undefined ? parseOptionalDate(payload.dateJoined) : undefined;
-        data.profile_photo_url =
-          payload.profilePhotoUrl !== undefined ? payload.profilePhotoUrl : undefined;
-        data.role = payload.role;
-        data.team_id = payload.teamId !== undefined ? payload.teamId : undefined;
+        if (payload.firstName) data.first_name = payload.firstName;
+        if (payload.lastName) data.last_name = payload.lastName;
+        if (payload.phoneNumber) data.phone_number = normalizePhoneNumber(payload.phoneNumber);
+        if (payload.whatsappNumber !== undefined) data.whatsapp_number = payload.whatsappNumber;
+        if (payload.email !== undefined) data.email = payload.email;
+        if (payload.dateOfBirth !== undefined) data.date_of_birth = parseOptionalDate(payload.dateOfBirth);
+        if (payload.maritalStatus !== undefined) data.marital_status = payload.maritalStatus;
+        if (payload.dateJoined !== undefined) data.date_joined = parseOptionalDate(payload.dateJoined);
+        if (payload.profilePhotoUrl !== undefined) data.profile_photo_url = payload.profilePhotoUrl;
+        if (payload.role) data.role = payload.role;
+        if (payload.teamId !== undefined) data.team_id = payload.teamId;
       } else {
         const payload = selfUpdateSchema.parse(request.body);
-        data.whatsapp_number = payload.whatsappNumber !== undefined ? payload.whatsappNumber : undefined;
-        data.email = payload.email !== undefined ? payload.email : undefined;
-        data.date_of_birth =
-          payload.dateOfBirth !== undefined ? parseOptionalDate(payload.dateOfBirth) : undefined;
-        data.marital_status =
-          payload.maritalStatus !== undefined ? payload.maritalStatus : undefined;
-        data.profile_photo_url =
-          payload.profilePhotoUrl !== undefined ? payload.profilePhotoUrl : undefined;
+        if (payload.whatsappNumber !== undefined) data.whatsapp_number = payload.whatsappNumber;
+        if (payload.email !== undefined) data.email = payload.email;
+        if (payload.maritalStatus !== undefined) data.marital_status = payload.maritalStatus;
       }
 
       const updated = await prisma.member.update({
@@ -319,9 +294,30 @@ export function registerMemberRoutes(router: Router) {
         });
       }
 
-      response.json({
-        member: serializePrivateMember(updated)
+      response.json({ member: serializePrivateMember(updated) });
+    })
+  );
+
+  router.put(
+    "/:id/photo",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const memberId = String(request.params.id);
+      const existing = await getMemberOrThrow(memberId);
+      const isSelf = request.auth!.memberId === existing.id;
+      const isAdmin = isAdminRole(request.auth!.role);
+
+      if (!isSelf && !isAdmin) throw new ApiError(403, "You cannot update this photo.");
+
+      const { profile_photo_url } = z.object({ profile_photo_url: z.string().url() }).parse(request.body);
+
+      const updated = await prisma.member.update({
+        where: { id: existing.id },
+        data: { profile_photo_url },
+        include: { team: true }
       });
+
+      response.json({ member: serializePrivateMember(updated) });
     })
   );
 
@@ -358,22 +354,25 @@ export function registerMemberRoutes(router: Router) {
     asyncHandler(async (request, response) => {
       const memberId = String(request.params.id);
       const isSelf = request.auth!.memberId === memberId;
-      if (!isSelf && !isAdminRole(request.auth!.role)) {
-        throw new ApiError(403, "You can only view your own attendance.");
-      }
+      if (!isSelf && !isAdminRole(request.auth!.role)) throw new ApiError(403, "You can only view your own attendance.");
+
+      const member = await getMemberOrThrow(memberId);
+      const joinedDate = member.date_joined ? new Date(member.date_joined) : null;
+      if (joinedDate) joinedDate.setHours(0, 0, 0, 0);
+
+      const now = new Date();
+      now.setHours(23, 59, 59, 999); // Include sessions up to end of today
 
       const sessions = await prisma.attendanceSession.findMany({
-        where: {
-          branch_id: request.auth!.branchId ?? undefined
-        },
-        include: {
-          attendanceRecords: {
-            where: { member_id: memberId }
+        where: { 
+          branch_id: request.auth!.branchId ?? undefined,
+          meeting_date: {
+            gte: joinedDate || undefined,
+            lte: now
           }
         },
-        orderBy: {
-          meeting_date: "desc"
-        }
+        include: { attendanceRecords: { where: { member_id: memberId } } },
+        orderBy: { meeting_date: "desc" }
       });
 
       const history = sessions.map((session) => {
@@ -386,7 +385,6 @@ export function registerMemberRoutes(router: Router) {
           checkInTime: record?.check_in_time ?? null
         };
       });
-
       response.json({ history });
     })
   );
@@ -397,17 +395,14 @@ export function registerMemberRoutes(router: Router) {
     asyncHandler(async (request, response) => {
       const memberId = String(request.params.id);
       const isSelf = request.auth!.memberId === memberId;
-      if (!isSelf && !isAdminRole(request.auth!.role)) {
-        throw new ApiError(403, "You can only view your own dues.");
-      }
+      if (!isSelf && !isAdminRole(request.auth!.role)) throw new ApiError(403, "You can only view your own dues.");
 
-      await generateWeeklyDues();
       const rows = await prisma.duesPayment.findMany({
         where: { member_id: memberId },
         orderBy: { week_of: "desc" }
       });
-
-      response.json(buildDuesLedger(rows));
+      const member = await prisma.member.findUnique({ where: { id: memberId }, select: { date_joined: true } });
+      response.json(buildDuesLedger(rows, member?.date_joined || undefined));
     })
   );
 

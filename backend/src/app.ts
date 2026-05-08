@@ -13,6 +13,7 @@ import { registerDuesRoutes } from "./routes/dues.js";
 import { registerMemberRoutes } from "./routes/members.js";
 import { registerNotificationRoutes } from "./routes/notifications.js";
 import { registerTeamRoutes } from "./routes/teams.js";
+import { registerAnnouncementRoutes } from "./routes/announcements.js";
 
 export function createApp() {
   const app = express();
@@ -62,6 +63,10 @@ export function createApp() {
   const notificationRouter = express.Router();
   registerNotificationRoutes(notificationRouter);
   app.use("/api/notifications", notificationRouter);
+
+  const announcementRouter = express.Router();
+  registerAnnouncementRoutes(announcementRouter);
+  app.use("/api/announcements", announcementRouter);
 
   app.use(errorHandler);
   return app;

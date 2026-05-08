@@ -1,26 +1,12 @@
 import {
-  createContext,
   startTransition,
-  useContext,
   useEffect,
   useState,
   type ReactNode
 } from "react";
 
 import { api, getStoredAccessToken, setStoredAccessToken, type Member, type Permissions } from "../lib/api";
-
-type AuthContextValue = {
-  member: (Member & { permissions: Permissions }) | null;
-  accessToken: string | null;
-  loading: boolean;
-  requestOtp: (phoneNumber: string) => Promise<string>;
-  verifyOtp: (phoneNumber: string, otpCode: string) => Promise<void>;
-  devLogin: (phoneNumber: string) => Promise<void>;
-  logout: () => Promise<void>;
-  refreshSession: () => Promise<void>;
-};
-
-const AuthContext = createContext<AuthContextValue | null>(null);
+import { AuthContext, type AuthContextValue } from "./AuthContext";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [member, setMember] = useState<(Member & { permissions: Permissions }) | null>(null);
@@ -78,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  async function refreshSession() {
+  async function refreshMember() {
     const session = await api.refresh();
     startTransition(() => {
       setMember(session.member);
@@ -97,28 +83,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const value: AuthContextValue = {
+    member,
+    accessToken,
+    loading,
+    requestOtp,
+    verifyOtp,
+    devLogin,
+    logout,
+    refreshMember
+  };
+
   return (
-    <AuthContext.Provider
-      value={{
-        member,
-        accessToken,
-        loading,
-        requestOtp,
-        verifyOtp,
-        devLogin,
-        logout,
-        refreshSession
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
-  return context;
 }

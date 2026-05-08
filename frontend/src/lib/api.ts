@@ -35,6 +35,10 @@ export type Member = {
   isActive?: boolean;
   team: Team | null;
   permissions?: Permissions;
+  profile_completion?: {
+    percentage: number;
+    missing_fields: string[];
+  };
 };
 
 export type SessionPayload = {
@@ -52,27 +56,28 @@ export type AttendanceHistoryItem = {
 
 export type DuesLedgerItem = {
   id: string;
-  memberId?: string;
+  memberId: string;
   weekOf: string;
+  weekNumber: number;
   amount: number;
-  status: "pending" | "confirmed" | "failed";
-  method: "cash" | "momo" | null;
+  status: "paid" | "unpaid" | "advance";
+  method: string | null;
   paymentDate: string | null;
+  reference?: string | null;
 };
 
 export type DuesLedgerResponse = {
   ledger: DuesLedgerItem[];
   summary: {
-    totalDue: number;
     totalPaid: number;
     totalOutstanding: number;
     weeksPaid: number;
     weeksBehind: number;
     totalWeeks: number;
+    statusMessage: string;
   };
   annualBreakdown: Array<{
     year: number;
-    totalDue: number;
     totalPaid: number;
     totalOutstanding: number;
     totalWeeks: number;
@@ -110,37 +115,23 @@ export type DuesReport = {
     activeMembersCount: number;
     currentYear: number;
   };
-  alerts: {
-    twoPlusOutstanding: Array<{
-      memberId: string;
-      firstName: string;
-      lastName: string;
-      outstandingWeeks: number;
-    }>;
-    twoMonthsOutstanding: Array<{
-      memberId: string;
-      firstName: string;
-      lastName: string;
-      outstandingWeeks: number;
-    }>;
+};
+
+export type Announcement = {
+  id: string;
+  title: string;
+  body: string;
+  category: "event" | "notice" | "vacancy" | "program";
+  event_date: string | null;
+  event_time: string | null;
+  venue: string | null;
+  created_at: string;
+  posted_by: string;
+  postedBy: {
+    first_name: string;
+    last_name: string;
+    profile_photo_url: string | null;
   };
-  topPayers: Array<{
-    memberId: string;
-    firstName: string;
-    lastName: string;
-    amountPaid: number;
-    weeksPaid: number;
-  }>;
-  paymentLog: Array<{
-    id: string;
-    memberId: string;
-    memberName: string;
-    weekOf: string;
-    amount: number;
-    status: string;
-    method: string | null;
-    paymentDate: string | null;
-  }>;
 };
 
 class ApiError extends Error {
@@ -250,6 +241,9 @@ export const api = {
   updateMember(id: string, body: Record<string, unknown>, accessToken: string) {
     return request<{ member: Member }>(`/api/members/${id}`, { method: "PUT", body: JSON.stringify(body) }, accessToken);
   },
+  updateProfilePhoto(id: string, photoUrl: string, accessToken: string) {
+    return request<{ member: Member }>(`/api/members/${id}/photo`, { method: "PUT", body: JSON.stringify({ profile_photo_url: photoUrl }) }, accessToken);
+  },
   deactivateMember(id: string, accessToken: string) {
     return request<void>(`/api/members/${id}`, { method: "DELETE" }, accessToken);
   },
@@ -258,6 +252,9 @@ export const api = {
   },
   getMemberDues(memberId: string, accessToken: string) {
     return request<DuesLedgerResponse>(`/api/members/${memberId}/dues`, {}, accessToken);
+  },
+  getBirthdaysThisWeek(accessToken: string, days = 7) {
+    return request<{ members: Member[] }>(`/api/members/birthdays/this-week?days=${days}`, {}, accessToken);
   },
   listTeams() {
     return request<{ teams: Array<Team & { memberCount: number }> }>("/api/teams");
@@ -281,15 +278,16 @@ export const api = {
   },
   getActiveAttendanceSession(accessToken: string) {
     return request<{
+      isActive: boolean;
       session: {
         id: string;
         meetingDate: string;
         windowOpenAt: string;
         windowCloseAt: string | null;
         attendeeCount: number;
-      };
-      code: string;
-      secondsRemaining: number;
+      } | null;
+      code?: string;
+      secondsRemaining?: number;
     }>("/api/attendance/sessions/active", {}, accessToken);
   },
   closeAttendanceSession(id: string, accessToken: string) {
@@ -314,6 +312,12 @@ export const api = {
     const suffix = memberId ? `?memberId=${memberId}` : "";
     return request<DuesLedgerResponse>(`/api/dues${suffix}`, {}, accessToken);
   },
+  initiateMomoPayment(body: { member_id: string; week_dates: string[]; total_amount: number }, accessToken: string) {
+    return request<{ authorization_url: string; reference: string }>("/api/dues/momo/initiate", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }, accessToken);
+  },
   recordCashPayment(body: { memberId?: string; phoneNumber?: string; weeks?: string[]; amount?: number }, accessToken: string) {
     return request<{ payments: Array<{ id: string }>; amountApplied: number; weeksCovered: number }>("/api/dues/cash", {
       method: "POST",
@@ -322,6 +326,15 @@ export const api = {
   },
   getDuesReport(accessToken: string) {
     return request<DuesReport>("/api/dues/reports", {}, accessToken);
+  },
+  downloadStatement(year: number, accessToken: string, memberId?: string) {
+    const suffix = memberId ? `&member_id=${memberId}` : "";
+    return fetch(`${getApiBaseUrl()}/api/dues/statement?year=${year}${suffix}`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    }).then(res => {
+      if (!res.ok) throw new Error("Failed to download statement.");
+      return res.blob();
+    });
   },
   getAuditLogs(accessToken: string) {
     return request<{
@@ -344,6 +357,30 @@ export const api = {
       signature: string | null;
       publicId: string;
     }>("/api/members/upload-signature", { method: "POST" }, accessToken);
+  },
+  getAnnouncements(category?: string, accessToken?: string | null) {
+    const suffix = category ? `?category=${category}` : "";
+    return request<{ announcements: Announcement[] }>(`/api/announcements${suffix}`, {}, accessToken);
+  },
+  getAnnouncement(id: string, accessToken: string) {
+    return request<{ announcement: Announcement }>(`/api/announcements/${id}`, {}, accessToken);
+  },
+  postAnnouncement(body: Record<string, unknown>, accessToken: string) {
+    return request<{ announcement: Announcement }>("/api/announcements", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }, accessToken);
+  },
+  updateAnnouncement(id: string, body: Record<string, unknown>, accessToken: string) {
+    return request<{ announcement: Announcement }>(`/api/announcements/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }, accessToken);
+  },
+  deleteAnnouncement(id: string, accessToken: string) {
+    return request<void>(`/api/announcements/${id}`, {
+      method: "DELETE"
+    }, accessToken);
   }
 };
 

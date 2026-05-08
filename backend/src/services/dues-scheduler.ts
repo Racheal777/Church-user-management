@@ -8,7 +8,7 @@ export async function generateWeeklyDues(targetDate = new Date()) {
   const yearEnd = new Date(Date.UTC(targetYear, 11, 31));
   const members = await prisma.member.findMany({
     where: { is_active: true },
-    select: { id: true }
+    select: { id: true, date_joined: true }
   });
 
   if (!members.length) {
@@ -23,7 +23,13 @@ export async function generateWeeklyDues(targetDate = new Date()) {
       payment_status: "pending";
     }> = [];
 
-    for (let cursor = new Date(getFirstMondayOfYear(targetYear)); cursor <= yearEnd; cursor.setUTCDate(cursor.getUTCDate() + 7)) {
+    const firstMonday = getFirstMondayOfYear(targetYear);
+    const memberJoinDate = member.date_joined || firstMonday;
+
+    for (let cursor = new Date(firstMonday); cursor <= yearEnd; cursor.setUTCDate(cursor.getUTCDate() + 7)) {
+      // Skip weeks before member joined
+      if (cursor < memberJoinDate) continue;
+      
       weeks.push({
         member_id: member.id,
         amount: new Prisma.Decimal("2.00"),

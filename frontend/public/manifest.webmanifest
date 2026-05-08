@@ -1,7 +1,7 @@
 {
-  "name": "Church Youth Management",
-  "short_name": "Youth App",
-  "description": "Presbyterian Church youth member, attendance, and dues management",
+  "name": "YPG",
+  "short_name": "YPG",
+  "description": "YPG member, attendance, and dues management",
   "theme_color": "#0d3b66",
   "background_color": "#f7f4ed",
   "display": "standalone",

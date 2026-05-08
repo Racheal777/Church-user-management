@@ -21,7 +21,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import { Loader } from "../../components/Loader";
 import { api } from "../../lib/api";
-import { useAuth } from "../../providers/AuthProvider";
+import { useAuth } from "../../providers/AuthContext";
 import { useToast } from "../../providers/ToastProvider";
 import { formatMoney } from "../dues/shared-dues-ui";
 import clsx from "clsx";

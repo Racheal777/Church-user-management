@@ -1,6 +1,6 @@
 # Church Youth Management System
 
-Progressive Web App for a Presbyterian Church youth group with member management, attendance, dues tracking, and audit logging.
+Progressive Web App for YPG with member management, attendance, dues tracking, and audit logging.
 
 ## Workspace
 

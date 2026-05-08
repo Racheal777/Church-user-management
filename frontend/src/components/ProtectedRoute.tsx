@@ -2,7 +2,7 @@ import { Navigate, Outlet } from "react-router-dom";
 
 import { Loader } from "./Loader";
 import type { Permissions } from "../lib/api";
-import { useAuth } from "../providers/AuthProvider";
+import { useAuth } from "../providers/AuthContext";
 
 export function ProtectedRoute({ permission, adminOnly = false }: { permission?: keyof Permissions; adminOnly?: boolean }) {
   const { member, loading } = useAuth();

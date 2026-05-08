@@ -2,21 +2,19 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { 
   Smartphone, 
-  ChevronRight, 
-  ShieldCheck, 
   ArrowRight, 
   Loader2, 
   Fingerprint,
   Users,
   Calendar,
-  CreditCard
+  CreditCard,
+  ShieldCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { OtpInput } from "../../components/OtpInput";
-import { useAuth } from "../../providers/AuthProvider";
+import { useAuth } from "../../providers/AuthContext";
 import { useToast } from "../../providers/ToastProvider";
-import clsx from "clsx";
 
 export function LoginPage() {
   const location = useLocation();
@@ -98,26 +96,22 @@ export function LoginPage() {
 
       <div className="w-full max-w-5xl grid lg:grid-cols-2 gap-12 items-center relative z-10">
         
-        {/* Left Side: Branding & Info */}
+        {/* Left Side: YPG Branding */}
         <div className="hidden lg:flex flex-col justify-center space-y-12 pr-12">
-           <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-xl bg-blue-700 flex items-center justify-center shadow-lg shadow-blue-900/10">
-                 <div className="w-5 h-5 rounded-full border-4 border-white"></div>
-              </div>
-              <span className="text-3xl font-black tracking-tighter text-slate-900">PresbyYouth</span>
-           </div>
-
            <div className="space-y-6">
-              <h1 className="text-6xl font-black text-slate-900 leading-[1.05] tracking-tight">
-                One App.<br/>
-                Entire Fellowship.
-              </h1>
-              <p className="text-xl text-slate-500 font-medium leading-relaxed max-w-md">
-                Managing attendance, dues, and membership has never been this cute and simple.
-              </p>
+              <div className="w-20 h-20 rounded-[2rem] bg-white flex items-center justify-center shadow-2xl shadow-blue-900/10 p-2 border border-slate-50">
+                 <img src="/logo.png" alt="YPG Logo" className="w-full h-full object-contain" />
+              </div>
+              <div>
+                <span className="block text-5xl font-black tracking-tighter text-slate-900">YPG</span>
+                <span className="block text-sm font-medium text-slate-400 uppercase tracking-[0.2em] mt-1">Service All The Way</span>
+                <p className="mt-8 text-lg text-slate-500 font-medium leading-relaxed">
+                  Welcome back to the fellowship
+                </p>
+              </div>
            </div>
 
-           <div className="grid grid-cols-2 gap-6">
+           <div className="grid grid-cols-2 gap-8">
               <LoginInfoItem icon={Calendar} label="Live Attendance" />
               <LoginInfoItem icon={CreditCard} label="Dues Tracking" />
               <LoginInfoItem icon={Users} label="Member Directory" />
@@ -130,13 +124,17 @@ export function LoginPage() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="bg-white rounded-2xl p-10 md:p-16 shadow-lg shadow-blue-900/10 border border-slate-50 w-full"
+          className="bg-white rounded-[3rem] p-10 md:p-16 shadow-2xl shadow-blue-900/5 border border-slate-100 w-full"
         >
-          <div className="flex lg:hidden items-center gap-3 mb-10 justify-center">
-             <div className="w-10 h-10 rounded-xl bg-blue-700 flex items-center justify-center shadow-lg shadow-blue-900/5">
-                <div className="w-3 h-3 rounded-full border-2 border-white"></div>
+          {/* Mobile Header */}
+          <div className="flex lg:hidden flex-col items-center gap-4 mb-12 justify-center">
+             <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-2xl shadow-blue-900/10 p-2 border border-slate-50">
+                <img src="/logo.png" alt="YPG Logo" className="w-full h-full object-contain" />
              </div>
-             <span className="text-xl font-black tracking-tighter text-slate-900">PresbyYouth</span>
+             <div className="text-center">
+                <span className="block text-xl font-black tracking-tighter text-slate-900 leading-none">YPG</span>
+                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Service All The Way</span>
+             </div>
           </div>
 
           <AnimatePresence mode="wait">
@@ -146,30 +144,29 @@ export function LoginPage() {
                 initial={{ x: -20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: 20, opacity: 0 }}
-                className="space-y-10"
+                className="space-y-12"
               >
                 <div className="text-center space-y-4">
-                   <div className="w-20 h-20 rounded-[2.25rem] bg-slate-50 text-blue-700 flex items-center justify-center mx-auto transition-transform hover:scale-110">
-                      <Smartphone className="w-10 h-10" />
-                   </div>
-                   <h2 className="text-3xl font-black text-slate-900 tracking-tight">Welcome Back!</h2>
-                   <p className="text-slate-500 text-sm font-medium">Enter your phone number to get started.</p>
+                   <h2 className="text-4xl font-black text-slate-900 tracking-tight">Sign In</h2>
+                   <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                      Enter your phone number and we'll send <br className="hidden sm:block" /> you a login code.
+                   </p>
                 </div>
 
-                <div className="space-y-6">
-                   <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone Number</label>
+                <div className="space-y-8">
+                   <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Phone Number</label>
                       <input 
-                        className="w-full bg-slate-50 border-none rounded-2xl px-6 py-5 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm font-bold text-slate-700 placeholder:text-slate-300 shadow-sm" 
+                        className="w-full bg-slate-50 border-none rounded-[1.25rem] px-8 py-6 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-base font-bold text-slate-700 placeholder:text-slate-300 shadow-sm" 
                         value={phoneNumber} 
                         onChange={(event) => setPhoneNumber(event.target.value)} 
                         placeholder="+233..." 
                       />
                    </div>
 
-                   <div className="space-y-4">
+                   <div className="space-y-6">
                       <button 
-                        className="w-full bg-blue-700 hover:bg-blue-800 text-white py-5 rounded-xl font-black uppercase tracking-[0.2em] text-xs transition-all shadow-lg shadow-blue-900/10 flex items-center justify-center gap-2 disabled:opacity-30 active:scale-95"
+                        className="w-full bg-[#1a56db] hover:bg-blue-700 text-white py-6 rounded-[1.25rem] font-black uppercase tracking-[0.2em] text-xs transition-all shadow-xl shadow-blue-900/20 flex items-center justify-center gap-2 disabled:opacity-30 active:scale-95"
                         disabled={submitting || !normalizedPhoneNumber} 
                         onClick={() => void handleRequestOtp()}
                       >
@@ -179,11 +176,11 @@ export function LoginPage() {
 
                       {import.meta.env.DEV && (
                         <button 
-                          className="w-full bg-white border-2 border-slate-100 hover:bg-slate-50 text-slate-400 py-4 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] transition-all active:scale-95 flex items-center justify-center gap-2"
+                          className="w-full bg-transparent hover:bg-slate-50 text-slate-300 py-3 rounded-xl font-black uppercase tracking-[0.2em] text-[9px] transition-all active:scale-95 flex items-center justify-center gap-2"
                           disabled={submitting || !normalizedPhoneNumber} 
                           onClick={() => void handleDevLogin()}
                         >
-                          <ShieldCheck className="w-4 h-4" />
+                          <ShieldCheck className="w-3 h-3" />
                           Developer Bypass
                         </button>
                       )}
@@ -196,18 +193,20 @@ export function LoginPage() {
                 initial={{ x: -20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: 20, opacity: 0 }}
-                className="space-y-10"
+                className="space-y-12"
               >
                 <div className="text-center space-y-4">
                    <div className="w-20 h-20 rounded-[2.25rem] bg-blue-50 text-blue-700 flex items-center justify-center mx-auto">
                       <Fingerprint className="w-10 h-10" />
                    </div>
-                   <h2 className="text-3xl font-black text-slate-900 tracking-tight">Verify Identity</h2>
-                   <p className="text-slate-500 text-sm font-medium">We sent a 6-digit code to {phoneNumber}.</p>
+                   <h2 className="text-3xl font-black text-slate-900 tracking-tight">Enter your code</h2>
+                   <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                      We sent a 6-digit code to {phoneNumber}. <br className="hidden sm:block" /> It expires in 5 minutes.
+                   </p>
                 </div>
 
                 <div className="space-y-8">
-                   <div className="flex justify-center">
+                   <div className="flex justify-center scale-90 sm:scale-100">
                       <OtpInput
                         length={6}
                         value={otpCode}
@@ -220,28 +219,28 @@ export function LoginPage() {
                       />
                    </div>
 
-                   <div className="space-y-4">
+                   <div className="space-y-6">
                       <button 
-                        className="w-full bg-blue-700 hover:bg-blue-800 text-white py-5 rounded-xl font-black uppercase tracking-[0.2em] text-xs transition-all shadow-lg shadow-blue-900/10 flex items-center justify-center gap-2 disabled:opacity-30 active:scale-95"
+                        className="w-full bg-[#1a56db] hover:bg-blue-700 text-white py-6 rounded-[1.25rem] font-black uppercase tracking-[0.2em] text-xs transition-all shadow-xl shadow-blue-900/20 flex items-center justify-center gap-2 disabled:opacity-30 active:scale-95"
                         disabled={submitting || otpCode.length !== 6} 
                         onClick={() => void handleVerifyOtp()}
                       >
-                        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify & Continue"}
+                        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify Code"}
                         <ArrowRight className="w-4 h-4" />
                       </button>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="flex flex-col items-center gap-4">
                          <button 
-                           className="bg-slate-50 hover:bg-slate-100 text-slate-500 py-4 rounded-2xl font-black uppercase tracking-widest text-[9px] transition-all"
+                           className="text-slate-400 hover:text-blue-700 font-black uppercase tracking-widest text-[9px] transition-all"
                            onClick={() => void handleRequestOtp()}
                          >
                            Resend Code
                          </button>
                          <button 
-                           className="bg-slate-50 hover:bg-slate-100 text-slate-500 py-4 rounded-2xl font-black uppercase tracking-widest text-[9px] transition-all"
+                           className="text-slate-400 hover:text-slate-900 font-black uppercase tracking-widest text-[9px] transition-all"
                            onClick={() => { setStep("request"); setOtpCode(""); }}
                          >
-                           Change Number
+                           ← Back to phone number
                          </button>
                       </div>
                    </div>
@@ -257,11 +256,11 @@ export function LoginPage() {
 
 function LoginInfoItem({ icon: Icon, label }: any) {
   return (
-    <div className="flex items-center gap-3 group">
-       <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center transition-all group-hover:scale-110">
+    <div className="flex items-center gap-4 group">
+       <div className="w-10 h-10 rounded-[1rem] bg-slate-50 text-slate-400 flex items-center justify-center transition-all group-hover:scale-110 group-hover:bg-blue-50 group-hover:text-blue-700">
           <Icon className="w-5 h-5" />
        </div>
-       <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{label}</span>
+       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none group-hover:text-slate-600">{label}</span>
     </div>
   );
 }

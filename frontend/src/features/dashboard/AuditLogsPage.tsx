@@ -4,7 +4,7 @@ import { Loader } from "../../components/Loader";
 import { PageHeader } from "../../components/PageHeader";
 import { SectionCard } from "../../components/SectionCard";
 import { api } from "../../lib/api";
-import { useAuth } from "../../providers/AuthProvider";
+import { useAuth } from "../../providers/AuthContext";
 
 export function AuditLogsPage() {
   const { accessToken } = useAuth();

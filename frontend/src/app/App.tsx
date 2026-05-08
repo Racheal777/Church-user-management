@@ -6,6 +6,7 @@ import { SidebarLayout } from "../components/SidebarLayout";
 import { ProtectedRoute } from "../components/ProtectedRoute";
 import { AttendanceManagerPage } from "../features/attendance/AttendanceManagerPage";
 import { CheckInPage } from "../features/attendance/CheckInPage";
+import { AttendanceHistoryPage } from "../features/attendance/AttendanceHistoryPage";
 import { AuditLogsPage } from "../features/dashboard/AuditLogsPage";
 import { HomePage } from "../features/dashboard/HomePage";
 import { DirectoryPage } from "../features/directory/DirectoryPage";
@@ -18,7 +19,9 @@ import { ProfilePage } from "../features/profile/ProfilePage";
 import { TeamsPage } from "../features/teams/TeamsPage";
 import { ReportsPage } from "../features/dashboard/ReportsPage";
 import { CriticalFollowupsPage } from "../features/dashboard/CriticalFollowupsPage";
-import { useAuth } from "../providers/AuthProvider";
+import { AnnouncementsPage } from "../features/dashboard/AnnouncementsPage";
+import { BirthdaysPage } from "../features/dashboard/BirthdaysPage";
+import { useAuth } from "../providers/AuthContext";
 
 function Root() {
   const { member } = useAuth();
@@ -37,10 +40,13 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       { path: "directory", element: <DirectoryPage /> },
+      { path: "announcements", element: <AnnouncementsPage /> },
+      { path: "birthdays", element: <BirthdaysPage /> },
       {
         element: <ProtectedRoute />,
         children: [
           { path: "check-in", element: <CheckInPage /> },
+          { path: "attendance-history", element: <AttendanceHistoryPage /> },
           { path: "dues", element: <DuesPage /> },
           { path: "my-dues", element: <MyDuesPage /> },
           { path: "profile", element: <ProfilePage /> }

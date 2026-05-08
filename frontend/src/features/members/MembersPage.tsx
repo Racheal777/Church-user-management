@@ -26,7 +26,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import { Loader } from "../../components/Loader";
 import { api, type Member, type Role } from "../../lib/api";
-import { useAuth } from "../../providers/AuthProvider";
+import { useAuth } from "../../providers/AuthContext";
 import { useToast } from "../../providers/ToastProvider";
 import clsx from "clsx";
 import { StatCard } from "../dashboard/components/StatCard";
