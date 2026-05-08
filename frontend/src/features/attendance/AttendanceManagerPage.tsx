@@ -11,6 +11,9 @@ import {
   Activity,
   ArrowRight,
   ShieldCheck,
+  Settings,
+  LogOut,
+  AlertTriangle,
   RefreshCw,
   Zap
 } from "lucide-react";
@@ -67,6 +70,7 @@ export function AttendanceManagerPage() {
   async function closeSession() {
     if (!accessToken || !activeQuery.data) return;
     try {
+      if (!activeQuery.data?.session) return;
       await api.closeAttendanceSession(activeQuery.data.session.id, accessToken);
       await activeQuery.refetch();
       toast.info({

@@ -81,6 +81,10 @@ export function ProfilePage() {
       // 1. Get signed upload signature
       const { signature, timestamp, apiKey, cloudName, publicId } = await api.signImageUpload(`members/${member.id}`, accessToken);
 
+      if (!apiKey || !signature || !cloudName || !publicId) {
+        throw new Error("Missing upload configuration");
+      }
+
       // 2. Upload to Cloudinary
       const cloudinaryData = new FormData();
       cloudinaryData.append("file", file);
