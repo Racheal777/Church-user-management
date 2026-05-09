@@ -13,7 +13,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
-    "deploy": "npm run prisma:generate && npm run build && prisma migrate deploy && npm run prisma:seed"
+    "deploy": "npm run prisma:generate && npm run build && prisma migrate deploy"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

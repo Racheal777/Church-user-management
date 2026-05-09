@@ -276,7 +276,7 @@ export function ManageDuesPage() {
                <h3 className="font-bold text-xs uppercase tracking-[0.25em] text-red-500">Critical Alerts</h3>
              </div>
              <div className="space-y-4">
-                {(reportQuery.data?.alerts.twoMonthsOutstanding ?? []).slice(0, 3).map((item: any) => (
+                {(reportQuery.data?.alerts?.twoMonthsOutstanding ?? []).slice(0, 3).map((item: any) => (
                  <div key={item.memberId} className="p-4 rounded-2xl bg-white border border-red-100 text-red-900 flex justify-between items-center shadow-sm">
                    <div className="text-xs font-bold">{item.firstName} {item.lastName}</div>
                    <div className="text-[8px] font-black bg-red-100 text-red-700 px-2 py-0.5 rounded-lg">-{item.outstandingWeeks} WKS</div>

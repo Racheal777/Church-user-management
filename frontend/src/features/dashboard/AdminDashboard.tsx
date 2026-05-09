@@ -181,7 +181,7 @@ export function AdminDashboard() {
         <button
           onClick={() => setActiveTab("insights")}
           className={clsx(
-            "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+            "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
             activeTab === "insights" ? "bg-white text-blue-700 shadow-sm" : "text-slate-400 hover:text-slate-600"
           )}
         >
@@ -191,7 +191,7 @@ export function AdminDashboard() {
         <button
           onClick={() => setActiveTab("announcements")}
           className={clsx(
-            "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+            "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
             activeTab === "announcements" ? "bg-white text-blue-700 shadow-sm" : "text-slate-400 hover:text-slate-600"
           )}
         >

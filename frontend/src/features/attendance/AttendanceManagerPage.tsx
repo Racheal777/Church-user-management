@@ -47,7 +47,7 @@ export function AttendanceManagerPage() {
     }
   });
 
-  const isMissingSession = activeQuery.error instanceof ApiError && activeQuery.error.status === 404;
+  const isMissingSession = activeQuery.data?.isActive === false || (activeQuery.error instanceof ApiError && activeQuery.error.status === 404);
   const isCommunicating = activeQuery.isFetching && !activeQuery.data && !activeQuery.error;
 
   async function startSession() {
@@ -169,7 +169,7 @@ export function AttendanceManagerPage() {
                      Retry Connection
                    </button>
                 </div>
-             ) : activeQuery.data ? (
+             ) : activeQuery.data?.isActive ? (
                 <div className="space-y-10 animate-in zoom-in-95 duration-500">
                    {/* Bold Display Card */}
                    <div className="bg-slate-900 rounded-2xl p-12 text-center text-white relative overflow-hidden shadow-lg shadow-blue-900/10 group">

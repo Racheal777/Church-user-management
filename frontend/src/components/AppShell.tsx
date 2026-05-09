@@ -70,8 +70,8 @@ export function AppShell() {
                   className={({ isActive }) => clsx(
                     "relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all",
                     isActive 
-                      ? "bg-white text-[#1a56db] shadow-sm" 
-                      : "text-slate-500 hover:text-slate-900"
+                      ? "bg-white text-[#1a56db] shadow-sm cursor-default" 
+                      : "text-slate-500 hover:text-slate-900 cursor-pointer"
                   )}
                 >
                   {item.icon}
@@ -174,6 +174,7 @@ function buildNavItems(canManageFinance: boolean) {
 
   if (canManageFinance) {
     items.push({ to: "/manage-dues", label: "Admin", icon: <Settings className="h-5 w-5" /> });
+    items.push({ to: "/teams", label: "Teams", icon: <Users className="h-5 w-5" /> });
   }
 
   return items;
