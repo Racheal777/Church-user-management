@@ -51,12 +51,12 @@ export function AppShell() {
         >
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center gap-3 group">
-              <div className="h-10 w-10 overflow-hidden rounded-xl bg-white shadow-sm border border-slate-100 group-hover:scale-105 transition-transform">
+              <div className="h-12 w-12 overflow-hidden rounded-xl bg-white shadow-sm border border-slate-100 group-hover:scale-105 transition-transform">
                 <img src="/logo.png" alt="YPG" className="h-full w-full object-contain p-1" />
               </div>
               <div className="hidden sm:block">
-                <span className="block font-black text-lg text-slate-900 leading-none">YPG</span>
-                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Service All The Way</span>
+                <span className="block font-black text-xl text-slate-900 leading-none">YPG</span>
+                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Service All The Way</span>
               </div>
             </Link>
           </div>

@@ -99,12 +99,12 @@ export function LoginPage() {
         {/* Left Side: YPG Branding */}
         <div className="hidden lg:flex flex-col justify-center space-y-12 pr-12">
            <div className="space-y-6">
-              <div className="w-20 h-20 rounded-[2rem] bg-white flex items-center justify-center shadow-2xl shadow-blue-900/10 p-2 border border-slate-50">
+              <div className="w-40 h-40 rounded-[3rem] bg-white flex items-center justify-center shadow-2xl shadow-blue-900/10 p-5 border border-slate-50">
                  <img src="/logo.png" alt="YPG Logo" className="w-full h-full object-contain" />
               </div>
               <div>
-                <span className="block text-5xl font-black tracking-tighter text-slate-900">YPG</span>
-                <span className="block text-sm font-medium text-slate-400 uppercase tracking-[0.2em] mt-1">Service All The Way</span>
+                <span className="block text-[160px] font-black tracking-tighter text-slate-900 leading-[0.8] mb-4">YPG</span>
+                <span className="block text-xl font-black text-slate-400 uppercase tracking-[0.4em]">Service All The Way</span>
                 <p className="mt-8 text-lg text-slate-500 font-medium leading-relaxed">
                   Welcome back to the fellowship
                 </p>
@@ -128,13 +128,13 @@ export function LoginPage() {
         >
           {/* Mobile Header */}
           <div className="flex lg:hidden flex-col items-center gap-4 mb-12 justify-center">
-             <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-2xl shadow-blue-900/10 p-2 border border-slate-50">
+              <div className="w-24 h-24 rounded-3xl bg-white flex items-center justify-center shadow-2xl shadow-blue-900/10 p-4 border border-slate-50">
                 <img src="/logo.png" alt="YPG Logo" className="w-full h-full object-contain" />
-             </div>
-             <div className="text-center">
-                <span className="block text-xl font-black tracking-tighter text-slate-900 leading-none">YPG</span>
-                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Service All The Way</span>
-             </div>
+              </div>
+              <div className="text-center">
+                <span className="block text-4xl font-black tracking-tighter text-slate-900 leading-none">YPG</span>
+                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">Service All The Way</span>
+              </div>
           </div>
 
           <AnimatePresence mode="wait">
@@ -147,7 +147,7 @@ export function LoginPage() {
                 className="space-y-12"
               >
                 <div className="text-center space-y-4">
-                   <h2 className="text-4xl font-black text-slate-900 tracking-tight">Sign In</h2>
+                   <h2 className="text-xl font-black text-slate-900 uppercase tracking-widest">Sign In</h2>
                    <p className="text-slate-500 text-sm font-medium leading-relaxed">
                       Enter your phone number and we'll send <br className="hidden sm:block" /> you a login code.
                    </p>
@@ -155,9 +155,9 @@ export function LoginPage() {
 
                 <div className="space-y-8">
                    <div className="space-y-3">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Phone Number</label>
+                      <label className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] ml-1">Phone Number</label>
                       <input 
-                        className="w-full bg-slate-50 border-none rounded-[1.25rem] px-8 py-6 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-base font-bold text-slate-700 placeholder:text-slate-300 shadow-sm" 
+                        className="w-full bg-slate-50 border-none rounded-xl px-6 py-4 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm font-bold text-slate-700 placeholder:text-slate-300 shadow-sm" 
                         value={phoneNumber} 
                         onChange={(event) => setPhoneNumber(event.target.value)} 
                         placeholder="+233..." 
@@ -166,11 +166,11 @@ export function LoginPage() {
 
                    <div className="space-y-6">
                       <button 
-                        className="w-full bg-[#1a56db] hover:bg-blue-700 text-white py-6 rounded-[1.25rem] font-black uppercase tracking-[0.2em] text-xs transition-all shadow-xl shadow-blue-900/20 flex items-center justify-center gap-2 disabled:opacity-30 active:scale-95"
+                        className="w-full bg-[#1a56db] hover:bg-blue-700 text-white py-4 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 disabled:opacity-30 active:scale-95"
                         disabled={submitting || !normalizedPhoneNumber} 
                         onClick={() => void handleRequestOtp()}
                       >
-                        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send Login Code"}
+                        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sign in next"}
                         <ArrowRight className="w-4 h-4" />
                       </button>
 

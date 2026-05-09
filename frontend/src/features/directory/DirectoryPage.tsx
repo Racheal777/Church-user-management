@@ -178,9 +178,9 @@ export function DirectoryPage() {
                    {leaders.map(leader => (
                      <div 
                       key={leader.id} 
-                      className="shrink-0 w-64 bg-white rounded-[2.5rem] p-8 border-[1.5px] border-[#C9A84C] shadow-xl shadow-amber-900/5 flex flex-col items-center text-center space-y-4"
+                      className="shrink-0 w-48 bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col items-center text-center space-y-3"
                      >
-                        <Avatar member={leader} size="lg" ringColor="#C9A84C" />
+                        <Avatar member={leader} size="md" />
                         <div>
                            <h3 className="text-lg font-black text-slate-900 tracking-tight">{leader.firstName} {leader.lastName}</h3>
                            <p className="text-[10px] font-black text-amber-600 uppercase tracking-[0.15em] mt-1">{leader.role.replace("_", " ")}</p>
@@ -209,8 +209,8 @@ export function DirectoryPage() {
                        {members.map(member => (
                          <div 
                           key={member.id} 
-                          className="shrink-0 lg:shrink w-32 lg:w-full bg-white rounded-[2rem] p-4 border border-slate-100 shadow-sm flex flex-col items-center text-center space-y-3"
-                          style={{ borderTop: `3px solid ${team.color}` }}
+                          className="shrink-0 lg:shrink w-28 lg:w-full bg-white rounded-2xl p-3 border border-slate-100 shadow-sm flex flex-col items-center text-center space-y-2"
+                          style={{ borderTop: `2px solid ${team.color}` }}
                          >
                             <Avatar member={member} size="md" />
                             <div className="min-w-0 w-full">

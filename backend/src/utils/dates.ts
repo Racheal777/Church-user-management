@@ -21,3 +21,11 @@ export function addDays(date: Date, days: number) {
 export function toIsoDate(date: Date) {
   return date.toISOString().slice(0, 10);
 }
+
+export function getNextMonday(date: Date) {
+  const utcDate = startOfUtcDay(date);
+  const day = utcDate.getUTCDay();
+  const daysUntilNextMonday = ((7 - day) % 7) + 1;
+  utcDate.setUTCDate(utcDate.getUTCDate() + daysUntilNextMonday);
+  return utcDate;
+}

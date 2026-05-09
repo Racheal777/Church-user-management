@@ -220,61 +220,102 @@ export function registerDuesRoutes(router: Router) {
       });
 
       const ledgerData = buildDuesLedger(rows, member.date_joined || undefined);
-      const yearItems = ledgerData.ledger.filter(i => new Date(i.weekOf).getUTCFullYear() === year);
+      const yearItems = ledgerData.ledger.filter(i => 
+        new Date(i.weekOf).getUTCFullYear() === year && 
+        (i.status === "paid" || i.status === "advance")
+      );
       const yearSummary = ledgerData.annualBreakdown.find(a => a.year === year);
 
-      const doc = new PDFDocument({ margin: 50 });
+      const doc = new PDFDocument({ margin: 50, size: "A4" });
       
       response.setHeader("Content-Type", "application/pdf");
-      response.setHeader("Content-Disposition", `attachment; filename=Stewardship_Statement_${year}.pdf`);
+      response.setHeader("Content-Disposition", `attachment; filename=Victory_Presby_Statement_${year}.pdf`);
       
       doc.pipe(response);
 
-      // Header
-      doc.fontSize(20).text("YPG Fellowship", { align: "center" });
-      doc.fontSize(12).text("Stewardship Statement", { align: "center" }).moveDown();
-      doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke().moveDown();
+      // --- BRANDING COLORS ---
+      const CH_BLUE = "#1a56db";
+      const CH_GOLD = "#fbbf24";
+      const TEXT_DARK = "#0f172a";
+      const TEXT_LIGHT = "#64748b";
 
-      // Member Info
-      doc.fontSize(10).font("Helvetica-Bold").text(`Member: ${member.first_name} ${member.last_name}`);
-      doc.font("Helvetica").text(`Team: ${member.team?.name || "N/A"}`);
-      doc.text(`Year: ${year}`);
-      doc.text(`Generated: ${new Date().toLocaleDateString()}`).moveDown(2);
+      // --- HEADER ---
+      // Draw a gold bar at the top
+      doc.rect(0, 0, 600, 40).fill(CH_BLUE);
+      doc.rect(0, 40, 600, 4).fill(CH_GOLD);
 
-      // Table Header
-      const tableTop = doc.y;
-      doc.font("Helvetica-Bold");
-      doc.text("Date", 50, tableTop);
-      doc.text("Week", 150, tableTop);
-      doc.text("Status", 250, tableTop);
-      doc.text("Amount", 350, tableTop);
-      doc.text("Method", 450, tableTop);
-      doc.moveDown();
-      doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke().moveDown(0.5);
-
-      // Table Rows
-      doc.font("Helvetica");
-      yearItems.forEach((item, i) => {
-        const y = doc.y;
-        if (y > 700) doc.addPage();
-        
-        doc.text(new Date(item.weekOf).toLocaleDateString(), 50, y);
-        doc.text(`Week ${item.weekNumber}`, 150, y);
-        doc.text(item.status.toUpperCase(), 250, y);
-        doc.text(`GHS ${item.amount.toFixed(2)}`, 350, y);
-        doc.text(item.method || "-", 450, y);
-        doc.moveDown(1.2);
-      });
-
-      // Summary
       doc.moveDown(2);
-      doc.font("Helvetica-Bold").text("Summary", { underline: true }).moveDown();
-      doc.font("Helvetica").text(`Total Commitment: GHS ${yearSummary?.totalPaid! + yearSummary?.totalOutstanding!}`);
-      doc.text(`Total Paid: GHS ${yearSummary?.totalPaid}`);
-      doc.text(`Total Outstanding: GHS ${yearSummary?.totalOutstanding}`);
       
+      // Church Name & Logo Area
+      doc.fillColor(CH_BLUE).fontSize(24).font("Helvetica-Bold").text("Victory Presby Church", { align: "center" });
+      doc.fontSize(10).font("Helvetica").fillColor(TEXT_LIGHT).text("Young People's Guild (YPG)", { align: "center" }).moveDown();
+      
+      doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("#e2e8f0").stroke().moveDown(1.5);
+
+      // Statement Title
+      doc.fillColor(TEXT_DARK).fontSize(16).font("Helvetica-Bold").text("DUES STATEMENT", { align: "left" });
+      doc.fontSize(9).font("Helvetica").fillColor(TEXT_LIGHT).text(`Period: January ${year} - December ${year}`).moveDown();
+
+      // Member Details Box
+      const detailsTop = doc.y;
+      doc.rect(50, detailsTop, 500, 80).fill("#f8fafc");
+      doc.rect(50, detailsTop, 2, 80).fill(CH_BLUE); // Blue accent line
+      
+      doc.fillColor(TEXT_DARK).fontSize(10).font("Helvetica-Bold").text("MEMBER DETAILS", 70, detailsTop + 15);
+      doc.font("Helvetica").fontSize(11).text(`${member.first_name} ${member.last_name}`, 70, detailsTop + 35);
+      doc.fontSize(9).fillColor(TEXT_LIGHT).text(`Team: ${member.team?.name || "N/A"} • ID: ${member.id.split('-')[0].toUpperCase()}`, 70, detailsTop + 50);
+      
+      // Summary on the right of details
+      doc.fillColor(TEXT_DARK).fontSize(10).font("Helvetica-Bold").text("ANNUAL SUMMARY", 350, detailsTop + 15);
+      doc.fontSize(14).fillColor(CH_BLUE).text(`GHS ${yearSummary?.totalPaid?.toFixed(2) || "0.00"}`, 350, detailsTop + 35);
+      doc.fontSize(8).fillColor(TEXT_LIGHT).font("Helvetica").text("Total Confirmed Payments", 350, detailsTop + 55);
+
       doc.moveDown(4);
-      doc.fontSize(8).fillColor("grey").text("YPG - Stewardship is Worship", { align: "center" });
+
+      // --- TABLE ---
+      const tableTop = doc.y;
+      doc.rect(50, tableTop, 500, 25).fill(CH_BLUE);
+      doc.fillColor("#ffffff").fontSize(9).font("Helvetica-Bold");
+      doc.text("DATE", 65, tableTop + 8);
+      doc.text("WEEK", 165, tableTop + 8);
+      doc.text("STATUS", 265, tableTop + 8);
+      doc.text("METHOD", 365, tableTop + 8);
+      doc.text("AMOUNT", 465, tableTop + 8, { align: "right", width: 70 });
+      
+      let currentY = tableTop + 25;
+      
+      doc.font("Helvetica").fontSize(9).fillColor(TEXT_DARK);
+      
+      if (yearItems.length === 0) {
+        doc.text("No confirmed payments found for this period.", 50, currentY + 20, { align: "center", width: 500 });
+      } else {
+        yearItems.forEach((item, i) => {
+          if (currentY > 700) {
+            doc.addPage();
+            currentY = 50;
+          }
+          
+          // Zebra striping
+          if (i % 2 === 0) {
+            doc.rect(50, currentY, 500, 20).fill("#f1f5f9");
+          }
+          
+          doc.fillColor(TEXT_DARK);
+          doc.text(new Date(item.weekOf).toLocaleDateString('en-GB'), 65, currentY + 6);
+          doc.text(`Week ${item.weekNumber}`, 165, currentY + 6);
+          doc.fillColor(CH_BLUE).font("Helvetica-Bold").text("PAID", 265, currentY + 6);
+          doc.fillColor(TEXT_DARK).font("Helvetica").text(item.method?.toUpperCase() || "CASH", 365, currentY + 6);
+          doc.font("Helvetica-Bold").text(`GHS ${item.amount.toFixed(2)}`, 465, currentY + 6, { align: "right", width: 70 });
+          
+          currentY += 20;
+        });
+      }
+
+      // --- FOOTER ---
+      const footerY = 780;
+      doc.moveTo(50, footerY - 10).lineTo(550, footerY - 10).strokeColor("#e2e8f0").stroke();
+      doc.fontSize(8).fillColor(TEXT_LIGHT).text("Victory Presbyterian Church - YPG Fellowship Management System", 50, footerY, { align: "center", width: 500 });
+      doc.text(`This is a computer generated statement. Date: ${new Date().toLocaleString()}`, 50, footerY + 12, { align: "center", width: 500 });
 
       doc.end();
     })

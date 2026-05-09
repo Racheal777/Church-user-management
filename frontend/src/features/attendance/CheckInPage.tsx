@@ -96,7 +96,7 @@ export function CheckInPage() {
                 <div className="w-20 h-20 rounded-xl bg-blue-700 text-white flex items-center justify-center mx-auto shadow-lg shadow-blue-900/10">
                   <Key className="w-10 h-10" />
                 </div>
-                <h1 className="text-4xl font-black text-slate-900 tracking-tighter">Enter Room Code</h1>
+                <h1 className="text-4xl font-black text-slate-900 tracking-tighter">Attendance Code</h1>
                 <p className="text-slate-500 text-sm max-w-xs mx-auto leading-relaxed">
                   Type the 4-digit code shown on the screen to confirm your attendance.
                 </p>

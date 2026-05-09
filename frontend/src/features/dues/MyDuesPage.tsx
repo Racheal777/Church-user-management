@@ -157,7 +157,7 @@ export function MyDuesPage() {
                 <ChevronLeft className="w-3 h-3" />
                 Back
               </Link>
-              <h1 className="text-3xl font-black text-slate-900 tracking-tight">My Stewardship</h1>
+              <h1 className="text-3xl font-black text-slate-900 tracking-tight">My Dues</h1>
               <p className="text-slate-500 text-xs font-medium">Track and settle your weekly contributions.</p>
            </div>
            <div className="flex bg-slate-100 p-1 rounded-xl">

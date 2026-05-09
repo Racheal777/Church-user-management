@@ -12,6 +12,7 @@ import { logAuditEvent } from "../services/audit-service.js";
 import { buildDuesLedger } from "../services/dues-service.js";
 import { buildPermissions, isAdminRole, memberManagers } from "../utils/permissions.js";
 import { normalizePhoneNumber } from "../utils/phone.js";
+import { getNextMonday } from "../utils/dates.js";
 
 const publicQuerySchema = z.object({
   search: z.string().optional(),
@@ -213,7 +214,7 @@ export function registerMemberRoutes(router: Router) {
           email: payload.email,
           date_of_birth: parseOptionalDate(payload.dateOfBirth),
           marital_status: payload.maritalStatus,
-          date_joined: parseOptionalDate(payload.dateJoined),
+          date_joined: payload.dateJoined ? new Date(payload.dateJoined) : getNextMonday(new Date()),
           profile_photo_url: payload.profilePhotoUrl,
           role: payload.role,
           team_id: payload.teamId,

@@ -1,19 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
 @import "tailwindcss";
 
 :root {
-  --color-primary: #1e40af;
+  --color-primary: #1a56db;
   --color-blue: #3b82f6;
   --color-gold: #f59e0b;
   --color-red: #ef4444;
   --color-green: #10b981;
   --color-canvas: #ffffff;
   --color-panel: #ffffff;
-  --color-border: #e2e8f0;
-  --shadow-soft: 0 18px 40px rgba(57, 65, 104, 0.08);
-  --shadow-card: 0 14px 28px rgba(57, 65, 104, 0.07);
-  --transition-soft: 220ms cubic-bezier(0.22, 1, 0.36, 1);
-  font-family: "Source Sans 3", "Segoe UI", sans-serif;
-  color: #132238;
+  --color-border: #f1f5f9;
+  --shadow-soft: 0 10px 30px rgba(57, 65, 104, 0.05);
+  --shadow-card: 0 8px 16px rgba(57, 65, 104, 0.04);
+  --transition-soft: 200ms cubic-bezier(0.2, 0, 0, 1);
+  font-family: "Plus Jakarta Sans", "Inter", sans-serif;
+  color: #0f172a;
   background: var(--color-canvas);
 }
 
@@ -44,13 +45,13 @@ textarea {
 input,
 select,
 textarea {
-  min-height: 48px;
+  min-height: 44px;
 }
 
 .field {
-  @apply w-full rounded-lg border bg-white px-4 text-sm text-slate-900 shadow-sm outline-none transition hover:border-slate-300 focus:ring-2;
+  @apply w-full rounded-xl border bg-white px-4 text-sm text-slate-900 shadow-sm outline-none transition hover:border-slate-300 focus:ring-2;
   border-color: var(--color-border);
-  min-height: 3.25rem;
+  min-height: 2.75rem;
   line-height: 1.2;
   appearance: none;
 }

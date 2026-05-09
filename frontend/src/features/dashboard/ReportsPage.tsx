@@ -318,7 +318,7 @@ function AuditLogsView({ logs }: { logs: any[] }) {
                          <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{log.actor.role.replace('_', ' ')}</div>
                       </td>
                       <td className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                         {log.entityType} <span className="text-slate-200">#</span>{log.entityId.slice(0, 6)}
+                         {log.entityType} <span className="text-slate-200">#</span>{log.entityId?.slice(0, 6) ?? 'N/A'}
                       </td>
                    </tr>
                 ))}

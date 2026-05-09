@@ -165,38 +165,14 @@ export function MemberDashboard() {
     <div className="mx-auto max-w-lg space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
       
       {/* 1. Greeting Section */}
-      <section className={clsx(
-        "relative overflow-hidden rounded-[2rem] border bg-white p-6 shadow-[var(--shadow-soft)] transition-all",
-        isBirthday(member.dateOfBirth) ? "border-amber-200 shadow-[0_0_30px_rgba(251,191,36,0.15)]" : "border-slate-100"
-      )}>
-        {isBirthday(member.dateOfBirth) && (
-          <div className="absolute -right-4 -top-4 text-4xl opacity-20 rotate-12">🎂</div>
-        )}
-        <div className="relative z-10 space-y-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-black tracking-tight text-slate-900">
-              {isBirthday(member.dateOfBirth) ? `Happy Birthday, ${member.firstName}! 🎂` : `Shalom, ${member.firstName} 👋`}
-            </h1>
-            <div className="flex -space-x-2">
-              <div className="grid h-10 w-10 place-items-center rounded-full border-2 border-white bg-[rgba(26,86,219,0.1)] text-sm font-bold text-[#1a56db]">
-                {member.firstName[0]}{member.lastName[0]}
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {member.team && (
-              <span 
-                className="rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm"
-                style={{ backgroundColor: member.team.color }}
-              >
-                {member.team.name}
-              </span>
-            )}
-            <span className={clsx(
-              "rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider shadow-sm",
-              member.isActive ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-amber-50 text-amber-700 border border-amber-100"
-            )}>
-              {member.isActive ? "Verified Member" : "Pending Verification"}
+      <section className="px-2 pt-2">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-black tracking-tighter text-slate-900">
+            {isBirthday(member.dateOfBirth) ? `Happy birthday ${member.firstName}! 🎂` : `Shalom, ${member.firstName}`}
+          </h1>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+              {member.team?.name || 'Fellowship'} • {member.role.replace("_", " ")}
             </span>
           </div>
         </div>
@@ -271,23 +247,6 @@ export function MemberDashboard() {
           </Link>
         </div>
 
-        <div className="no-scrollbar flex gap-2 overflow-x-auto px-1 pb-2">
-          {["All", "Event", "Notice", "Vacancy", "Program"].map((filter) => (
-            <button
-              key={filter}
-              onClick={() => setAnnouncementFilter(filter)}
-              className={clsx(
-                "whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold transition-all",
-                announcementFilter === filter 
-                  ? "bg-[#1a56db] text-white shadow-md shadow-blue-900/20" 
-                  : "bg-white text-slate-500 border border-slate-100 hover:bg-slate-50"
-              )}
-            >
-              {filter === "Event" ? "📅 " : filter === "Notice" ? "📢 " : filter === "Vacancy" ? "💼 " : filter === "Program" ? "🙏 " : ""}
-              {filter === "All" ? "All" : filter}
-            </button>
-          ))}
-        </div>
 
         <div className="space-y-3">
           {announcementsQuery.isLoading ? (
@@ -295,11 +254,11 @@ export function MemberDashboard() {
               {[1, 2].map(i => <div key={i} className="h-24 animate-pulse rounded-[1.5rem] bg-slate-50" />)}
             </div>
           ) : announcementsQuery.data?.announcements.length ? (
-            announcementsQuery.data.announcements.slice(0, 3).map((announcement) => (
+            announcementsQuery.data.announcements.slice(0, 2).map((announcement) => (
               <button
                 key={announcement.id}
                 onClick={() => setSelectedAnnouncement(announcement)}
-                className="w-full text-left group flex flex-col gap-3 rounded-[1.5rem] border border-slate-100 bg-white p-4 shadow-[var(--shadow-soft)] transition-all hover:border-blue-100 hover:shadow-md"
+                className="w-full text-left group flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:border-blue-100"
               >
                 <div className="flex items-center justify-between">
                   <span className={clsx(
@@ -374,42 +333,27 @@ export function MemberDashboard() {
 
       {/* 6. Compact Stats Strip */}
       <section className="grid grid-cols-2 gap-4">
-        <div className="rounded-[1.5rem] border border-slate-100 bg-white p-4 shadow-[var(--shadow-soft)]">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Week Streak</span>
-              <Activity className="h-3 w-3 text-emerald-500" />
-            </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-black text-slate-900">{streak}</span>
-              <span className="text-[10px] font-bold text-slate-500">weeks</span>
-            </div>
-            <p className={clsx(
-              "text-[10px] font-bold uppercase tracking-wider mt-1",
-              streak >= 3 ? "text-orange-500" : "text-slate-400"
-            )}>
-              {streak >= 3 ? "🔥 You're on fire!" : "Keep showing up!"}
-            </p>
-          </div>
-        </div>
 
-        <div className="rounded-[1.5rem] border border-slate-100 bg-white p-4 shadow-[var(--shadow-soft)]">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Dues Progress</span>
-              <Target className="h-3 w-3 text-blue-500" />
+        <Link to="/dues" className="block group">
+          <div className="rounded-[1.5rem] border border-slate-100 bg-white p-4 shadow-[var(--shadow-soft)] transition-all hover:border-blue-100 hover:shadow-md">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Dues Progress</span>
+                <Target className="h-3 w-3 text-blue-500 transition-transform group-hover:scale-110" />
+              </div>
+              <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                <div 
+                  className="h-full bg-[#1a56db] transition-all duration-1000" 
+                  style={{ width: `${duesProgress}%` }} 
+                />
+              </div>
+              <p className="mt-2 text-[10px] font-bold text-slate-900 flex items-center justify-between">
+                <span>{paidWeeks} / {totalWeeks} <span className="text-slate-400 font-medium ml-1">weeks settled</span></span>
+                <ChevronRight className="h-3 w-3 text-slate-300 transition-transform group-hover:translate-x-0.5" />
+              </p>
             </div>
-            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-              <div 
-                className="h-full bg-[#1a56db] transition-all duration-1000" 
-                style={{ width: `${duesProgress}%` }} 
-              />
-            </div>
-            <p className="mt-2 text-[10px] font-bold text-slate-900">
-              {paidWeeks} / {totalWeeks} <span className="text-slate-400">weeks settled</span>
-            </p>
           </div>
-        </div>
+        </Link>
       </section>
 
       {/* 7. Sticky Bottom Nav logic is in AppShell.tsx, but I'll add the pulsing check-in here for dashboard context if needed */}
@@ -510,19 +454,25 @@ function BibleVerseCard() {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: 0.2 }}
-      className="relative overflow-hidden rounded-[1.5rem] border border-slate-100 bg-gradient-to-br from-white to-blue-50/30 p-5 shadow-[var(--shadow-soft)]"
+      className="relative overflow-hidden rounded-[2.5rem] bg-amber-50/50 border border-amber-100/50 p-6 shadow-sm group"
     >
-      <div className="absolute -left-2 -top-2 text-2xl opacity-5">📖</div>
-      <div className="relative z-10 flex flex-col gap-3">
-        <p className="italic text-sm font-medium text-slate-600 leading-relaxed">
+      <div className="absolute -right-4 -bottom-4 text-6xl opacity-5 rotate-12 group-hover:rotate-0 transition-transform duration-500">📖</div>
+      <div className="relative z-10 space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600/80">Weekly Inspiration</span>
+        </div>
+        <p className="text-slate-700 font-medium leading-relaxed italic text-sm">
           "{verse.text}"
         </p>
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">— {verse.ref}</span>
-          <Heart className="h-3 w-3 text-red-300" />
+        <div className="flex items-center justify-between pt-2">
+          <span className="text-[10px] font-bold text-amber-700/60 uppercase tracking-widest">— {verse.ref}</span>
+          <div className="flex gap-1">
+            {[1,2,3].map(i => <Heart key={i} className={clsx("h-2.5 w-2.5", i === 1 ? "text-red-400" : "text-amber-200")} />)}
+          </div>
         </div>
       </div>
     </motion.div>

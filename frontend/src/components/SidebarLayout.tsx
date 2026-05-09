@@ -45,6 +45,7 @@ export function SidebarLayout() {
         { to: "/attendance", label: "Attendance", icon: Activity },
         { to: "/members", label: "Members", icon: Users },
         { to: "/manage-dues", label: "Manage Dues", icon: CreditCard },
+        { to: "/teams", label: "Teams", icon: Users },
         { to: "/reports", label: "Reports", icon: FileSearch }
       ]
     }
