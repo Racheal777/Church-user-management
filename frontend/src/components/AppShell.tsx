@@ -42,7 +42,7 @@ export function AppShell() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans member-side">
       <header className="sticky top-0 z-20 bg-white/80 px-4 py-4 backdrop-blur-xl border-b border-slate-100">
         <motion.div
           className="mx-auto flex max-w-6xl items-center justify-between gap-4"

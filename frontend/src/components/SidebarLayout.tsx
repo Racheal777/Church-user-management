@@ -59,7 +59,7 @@ export function SidebarLayout() {
   ];
 
   return (
-    <div className="dashboard-shell">
+    <div className="dashboard-shell admin-side">
       <aside className="dashboard-sidebar">
         <Link to="/" className="dashboard-brand">
           <div className="dashboard-brand-mark">PY</div>

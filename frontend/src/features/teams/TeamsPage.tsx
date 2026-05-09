@@ -241,19 +241,19 @@ function TeamStatCard({ icon: Icon, label, value, color }: any) {
 
 function TeamCard({ team, onEdit }: any) {
   return (
-    <div className="aspect-square bg-white rounded-xl p-8 shadow-sm border border-slate-100 flex flex-col justify-between group hover:border-blue-100 hover:shadow-md hover:shadow-blue-900/5 transition-all relative overflow-hidden">
+    <button 
+      onClick={onEdit}
+      className="w-full aspect-square bg-white rounded-xl p-8 shadow-sm border border-slate-100 flex flex-col justify-between group hover:border-blue-100 hover:shadow-md hover:shadow-blue-900/5 transition-all relative overflow-hidden text-left"
+    >
        <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full blur-[40px] opacity-10 group-hover:opacity-30 transition-opacity" style={{ backgroundColor: team.color }}></div>
        
        <div className="flex justify-between items-start">
           <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform" style={{ backgroundColor: team.color }}>
              <Globe className="w-6 h-6 text-white" />
           </div>
-          <button 
-            onClick={onEdit}
-            className="w-10 h-10 rounded-xl bg-slate-50 text-slate-300 flex items-center justify-center hover:bg-blue-50 hover:text-blue-700 transition-all opacity-0 group-hover:opacity-100"
-          >
+          <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-300 flex items-center justify-center group-hover:bg-blue-50 group-hover:text-blue-700 transition-all">
              <Edit3 className="w-4 h-4" />
-          </button>
+          </div>
        </div>
 
        <div>
@@ -264,9 +264,9 @@ function TeamCard({ team, onEdit }: any) {
           </div>
        </div>
 
-       <div className="absolute bottom-6 right-8 text-slate-100 group-hover:text-slate-200 transition-colors">
+       <div className="absolute bottom-6 right-8 text-slate-100 group-hover:text-blue-200 transition-colors">
           <ChevronRight className="w-6 h-6" />
        </div>
-    </div>
+    </button>
   );
 }

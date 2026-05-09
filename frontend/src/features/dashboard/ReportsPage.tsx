@@ -183,7 +183,7 @@ function FinancialReportView({ data }: { data: any }) {
                 </tr>
              </thead>
              <tbody className="divide-y divide-slate-50">
-                {data.paymentLog.slice(0, 10).map((log: any) => (
+                {(data.paymentLog ?? []).slice(0, 10).map((log: any) => (
                    <tr key={log.id} className="group hover:bg-slate-50/50 transition-all">
                       <td className="px-8 py-5">
                          <div className="text-xs font-bold text-slate-900">{new Date(log.weekOf).toLocaleDateString()}</div>
