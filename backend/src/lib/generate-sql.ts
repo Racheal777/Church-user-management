@@ -89,7 +89,7 @@ function main() {
   lines.push("-- Members");
   for (const file of files) {
     const raw = fs.readFileSync(path.join(RAW_DIR, file), "utf-8");
-    const rows = parse(raw, { columns: true, skip_empty_lines: true, trim: true });
+    const rows = parse(raw, { columns: true, skip_empty_lines: true, trim: true }) as Record<string, string>[];
 
     for (const row of rows) {
       const phone = normalizePhone(row.Phone);
