@@ -274,6 +274,9 @@ export const api = {
     });
     return request<{ members: Member[] }>(`/api/members${search.size ? `?${search.toString()}` : ""}`, {}, accessToken);
   },
+  getMember(id: string, accessToken: string) {
+    return request<{ member: Member }>(`/api/members/${id}`, {}, accessToken);
+  },
   createMember(body: Record<string, unknown>, accessToken: string) {
     return request<{ member: Member }>("/api/members", { method: "POST", body: JSON.stringify(body) }, accessToken);
   },

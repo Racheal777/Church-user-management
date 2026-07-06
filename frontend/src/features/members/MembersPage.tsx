@@ -1,24 +1,23 @@
 import { useEffect, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  Plus, 
-  UserPlus, 
-  Search, 
-  Edit3, 
-  Trash2, 
-  ChevronLeft, 
-  ShieldCheck, 
-  Mail, 
-  Phone, 
+import {
+  Plus,
+  UserPlus,
+  Search,
+  ChevronLeft,
+  ShieldCheck,
+  Mail,
+  Phone,
   MapPin,
   ChevronRight,
   ChevronLeft as ChevronLeftIcon,
   X,
   Users,
   CheckCircle2,
-  ArrowRight
+  ArrowRight,
+  Edit3,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { Loader } from "../../components/Loader";
@@ -43,9 +42,22 @@ const blankForm = {
 
 const ITEMS_PER_PAGE = 8;
 
+function getPaginationRange(current: number, total: number): (number | "...")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const range: (number | "...")[] = [1];
+  if (current > 3) range.push("...");
+  const lo = Math.max(2, current - 1);
+  const hi = Math.min(total - 1, current + 1);
+  for (let i = lo; i <= hi; i++) range.push(i);
+  if (current < total - 2) range.push("...");
+  range.push(total);
+  return range;
+}
+
 export function MembersPage() {
   const { accessToken } = useAuth();
   const toast = useToast();
+  const navigate = useNavigate();
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [form, setForm] = useState(blankForm);
@@ -300,7 +312,11 @@ export function MembersPage() {
                 </tr>
               )}
               {paginatedMembers.map((item) => (
-                <tr key={item.id} className="group hover:bg-slate-50/50 transition-all">
+                <tr
+                  key={item.id}
+                  onClick={() => navigate(`/members/${item.id}`)}
+                  className="group hover:bg-slate-50/50 transition-all cursor-pointer"
+                >
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-800 font-bold text-base border-2 border-white shadow-sm transition-transform group-hover:scale-105">
@@ -313,8 +329,8 @@ export function MembersPage() {
                       <div>
                         <h4 className="font-bold text-slate-900 text-sm group-hover:text-blue-700 transition-colors">{item.firstName} {item.lastName}</h4>
                         <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
-                           <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {item.phoneNumber}</span>
-                           <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {item.email || 'N/A'}</span>
+                          <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {item.phoneNumber}</span>
+                          <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {item.email || 'N/A'}</span>
                         </div>
                         {item.location && (
                           <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -353,20 +369,7 @@ export function MembersPage() {
                     </span>
                   </td>
                   <td className="px-8 py-6 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => setEditingMember(item)}
-                        className="w-9 h-9 rounded-xl bg-white border border-slate-100 text-slate-400 flex items-center justify-center hover:bg-blue-50 hover:text-blue-700 hover:border-blue-100 transition-all shadow-sm active:scale-90"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => void deactivateMember(item.id)}
-                        className="w-9 h-9 rounded-xl bg-white border border-slate-100 text-slate-400 flex items-center justify-center hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all shadow-sm active:scale-90"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-blue-700 transition-colors ml-auto" />
                   </td>
                 </tr>
               ))}
@@ -376,40 +379,45 @@ export function MembersPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-8 py-6 border-t border-slate-50 flex items-center justify-between bg-slate-50/10">
-            <div className="flex gap-2">
-              <button 
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-blue-700 disabled:opacity-30 disabled:pointer-events-none transition-all"
-              >
-                <ChevronLeftIcon className="w-5 h-5" />
-              </button>
-              <button 
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-blue-700 disabled:opacity-30 disabled:pointer-events-none transition-all"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
+          <div className="px-8 py-5 border-t border-slate-50 flex items-center justify-between gap-4">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-100 text-slate-500 text-xs font-black uppercase tracking-widest hover:bg-slate-50 hover:text-blue-700 disabled:opacity-30 disabled:pointer-events-none transition-all"
+            >
+              <ChevronLeftIcon className="w-4 h-4" />
+              Prev
+            </button>
+
+            <div className="flex items-center gap-1.5">
+              {getPaginationRange(currentPage, totalPages).map((page, i) =>
+                page === "..." ? (
+                  <span key={`e${i}`} className="w-9 text-center text-slate-300 text-xs font-black select-none">…</span>
+                ) : (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page as number)}
+                    className={clsx(
+                      "w-9 h-9 rounded-xl text-xs font-black transition-all",
+                      currentPage === page
+                        ? "bg-blue-700 text-white shadow-md shadow-blue-900/10"
+                        : "bg-white text-slate-400 hover:bg-blue-50 hover:text-blue-700 border border-slate-100"
+                    )}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
             </div>
-            <div className="flex items-center gap-2">
-               {Array.from({ length: totalPages }).map((_, i) => (
-                 <button
-                   key={i}
-                   onClick={() => setCurrentPage(i + 1)}
-                   className={clsx(
-                     "w-10 h-10 rounded-xl text-xs font-black transition-all",
-                     currentPage === i + 1 ? "bg-blue-700 text-white shadow-lg shadow-blue-900/10" : "bg-white text-slate-400 hover:bg-slate-50 border border-slate-100"
-                   )}
-                 >
-                   {i + 1}
-                 </button>
-               ))}
-            </div>
-            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:block">
-              Page {currentPage} of {totalPages}
-            </div>
+
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-100 text-slate-500 text-xs font-black uppercase tracking-widest hover:bg-slate-50 hover:text-blue-700 disabled:opacity-30 disabled:pointer-events-none transition-all"
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         )}
       </div>

@@ -45,6 +45,8 @@ export function AdminDashboard() {
   const navigate = useNavigate();
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<"insights" | "announcements">("insights");
+  const [attendanceView, setAttendanceView] = useState<"week" | "month">("month");
+  const [duesView, setDuesView] = useState<"week" | "month">("month");
   const [startingSession, setStartingSession] = useState(false);
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
@@ -233,11 +235,17 @@ export function AdminDashboard() {
                          <h2 className="text-xl font-black text-slate-900">Attendance Trend</h2>
                       </div>
                       <div className="flex bg-slate-50 p-1 rounded-lg">
-                         <button className="px-4 py-1.5 text-[10px] font-black uppercase rounded-md text-slate-400">Week</button>
-                         <button className="px-4 py-1.5 text-[10px] font-black uppercase rounded-md bg-white text-blue-700 shadow-sm">Month</button>
+                         <button
+                           onClick={() => setAttendanceView("week")}
+                           className={clsx("px-4 py-1.5 text-[10px] font-black uppercase rounded-md transition-all", attendanceView === "week" ? "bg-white text-blue-700 shadow-sm" : "text-slate-400 hover:text-slate-600")}
+                         >Week</button>
+                         <button
+                           onClick={() => setAttendanceView("month")}
+                           className={clsx("px-4 py-1.5 text-[10px] font-black uppercase rounded-md transition-all", attendanceView === "month" ? "bg-white text-blue-700 shadow-sm" : "text-slate-400 hover:text-slate-600")}
+                         >Month</button>
                       </div>
                    </div>
-                   <AttendanceTrendChart history={attendanceReport?.history} />
+                   <AttendanceTrendChart history={attendanceReport?.history} view={attendanceView} />
                 </section>
 
                 <div className="grid gap-6 md:grid-cols-2">
@@ -266,11 +274,17 @@ export function AdminDashboard() {
 
                    <section className="bg-white rounded-2xl border border-slate-100 p-8 shadow-sm flex flex-col">
                       <div className="flex items-center justify-between mb-6">
-                         <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Collections</h3>
-                         <Target className="w-4 h-4 text-blue-600" />
+                         <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Dues</h3>
+                         <div className="flex items-center gap-2">
+                           <div className="flex bg-slate-50 p-0.5 rounded-lg">
+                             <button onClick={() => setDuesView("week")} className={clsx("px-2.5 py-1 text-[9px] font-black uppercase rounded-md transition-all", duesView === "week" ? "bg-white text-blue-700 shadow-sm" : "text-slate-400 hover:text-slate-600")}>Week</button>
+                             <button onClick={() => setDuesView("month")} className={clsx("px-2.5 py-1 text-[9px] font-black uppercase rounded-md transition-all", duesView === "month" ? "bg-white text-blue-700 shadow-sm" : "text-slate-400 hover:text-slate-600")}>Month</button>
+                           </div>
+                           <Target className="w-4 h-4 text-blue-600" />
+                         </div>
                       </div>
                       <div className="flex-1 flex flex-col justify-between py-2">
-                         <DuesTrendChart history={duesReport?.history} />
+                         <DuesTrendChart history={duesReport?.history} view={duesView} />
                          <div className="mt-4 text-center">
                             <p className="text-2xl font-black text-slate-900 tracking-tight">GHS {formatMoney(receivedAmount)} <span className="text-xs font-medium text-slate-400">received</span></p>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">of GHS {formatMoney(yearlyTarget)} yearly target</p>
@@ -497,58 +511,84 @@ export function AdminDashboard() {
   );
 }
 
-function AttendanceTrendChart({ history }: { history?: Array<{ id: string; date: string; label: string; attendeeCount: number; rate: number }> }) {
-  const defaultHistory = [
-    { label: "S", rate: 45, attendeeCount: 18 },
-    { label: "M", rate: 52, attendeeCount: 21 },
-    { label: "T", rate: 48, attendeeCount: 19 },
-    { label: "W", rate: 61, attendeeCount: 25 },
-    { label: "T", rate: 55, attendeeCount: 22 },
-    { label: "F", rate: 68, attendeeCount: 28 },
-    { label: "S", rate: 72, attendeeCount: 30 },
-    { label: "S", rate: 65, attendeeCount: 26 },
+type SessionItem = { id?: string; date?: string; label: string; attendeeCount: number; rate: number };
+
+function groupSessionsByMonth(history: Array<{ id: string; date: string; label: string; attendeeCount: number; rate: number }>): SessionItem[] {
+  const map = new Map<string, { totalRate: number; count: number; attendeeCount: number }>();
+  for (const item of history) {
+    const d = new Date(item.date);
+    const key = d.toLocaleString("default", { month: "short" });
+    const prev = map.get(key) ?? { totalRate: 0, count: 0, attendeeCount: 0 };
+    map.set(key, { totalRate: prev.totalRate + item.rate, count: prev.count + 1, attendeeCount: prev.attendeeCount + item.attendeeCount });
+  }
+  return Array.from(map.entries()).map(([label, { totalRate, count, attendeeCount }]) => ({
+    label,
+    rate: Math.round(totalRate / count),
+    attendeeCount,
+  }));
+}
+
+function AttendanceTrendChart({ history, view = "month" }: { history?: Array<{ id: string; date: string; label: string; attendeeCount: number; rate: number }>; view?: "week" | "month" }) {
+  const fallbackWeek: SessionItem[] = [
+    { label: "Wk1", rate: 58, attendeeCount: 24 },
+    { label: "Wk2", rate: 63, attendeeCount: 26 },
+    { label: "Wk3", rate: 55, attendeeCount: 22 },
+    { label: "Wk4", rate: 70, attendeeCount: 29 },
+    { label: "Wk5", rate: 65, attendeeCount: 27 },
+    { label: "Wk6", rate: 72, attendeeCount: 30 },
+    { label: "Wk7", rate: 68, attendeeCount: 28 },
+    { label: "Wk8", rate: 75, attendeeCount: 31 },
   ];
-  
-  const data = history && history.length > 0 ? history : defaultHistory;
+  const fallbackMonth: SessionItem[] = [
+    { label: "Jan", rate: 55, attendeeCount: 90 },
+    { label: "Feb", rate: 60, attendeeCount: 98 },
+    { label: "Mar", rate: 58, attendeeCount: 95 },
+    { label: "Apr", rate: 65, attendeeCount: 106 },
+    { label: "May", rate: 70, attendeeCount: 114 },
+    { label: "Jun", rate: 68, attendeeCount: 111 },
+  ];
+
+  const weekData: SessionItem[] = history && history.length > 0 ? history.slice(-8) : fallbackWeek;
+  const monthData: SessionItem[] = history && history.length > 0 ? groupSessionsByMonth(history) : fallbackMonth;
+  const data = view === "week" ? weekData : monthData;
+
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-  
+
   return (
     <div className="relative mt-8">
       <div className="flex items-end justify-between gap-2 h-40 border-b border-slate-100 pb-2">
-         {data.map((item, i) => {
-            const heightPercent = `${item.rate}%`;
-            return (
-               <div 
-                 key={i} 
-                 className="flex-1 flex flex-col items-center gap-3 group relative cursor-pointer"
-                 onMouseEnter={() => setHoveredIdx(i)}
-                 onMouseLeave={() => setHoveredIdx(null)}
-               >
-                  <div className="w-full relative h-32 flex items-end">
-                     <motion.div 
-                       initial={{ scaleY: 0 }}
-                       animate={{ scaleY: 1 }}
-                       transition={{ duration: 0.5, delay: i * 0.05 }}
-                       className={clsx(
-                         "w-full rounded-t-lg transition-all duration-300 origin-bottom shadow-sm",
-                         hoveredIdx === i 
-                           ? "bg-gradient-to-t from-blue-700 to-indigo-500 shadow-md shadow-blue-500/20" 
-                           : i === data.length - 1
-                             ? "bg-gradient-to-t from-blue-600 to-indigo-400 shadow-md shadow-blue-500/10"
-                             : "bg-slate-100 opacity-60 hover:opacity-100 hover:bg-slate-200"
-                       )} 
-                       style={{ height: heightPercent }}
-                     />
-                  </div>
-                  <span className="text-[10px] font-black text-slate-300 uppercase">{item.label}</span>
-               </div>
-            );
-         })}
+        {data.map((item, i) => (
+          <div
+            key={i}
+            className="flex-1 flex flex-col items-center gap-3 group relative cursor-pointer"
+            onMouseEnter={() => setHoveredIdx(i)}
+            onMouseLeave={() => setHoveredIdx(null)}
+          >
+            <div className="w-full relative h-32 flex items-end">
+              <motion.div
+                key={`${view}-${i}`}
+                initial={{ scaleY: 0 }}
+                animate={{ scaleY: 1 }}
+                transition={{ duration: 0.45, delay: i * 0.04 }}
+                className={clsx(
+                  "w-full rounded-t-lg transition-colors duration-200 origin-bottom shadow-sm",
+                  hoveredIdx === i
+                    ? "bg-gradient-to-t from-blue-700 to-indigo-500 shadow-md shadow-blue-500/20"
+                    : i === data.length - 1
+                    ? "bg-gradient-to-t from-blue-600 to-indigo-400 shadow-md shadow-blue-500/10"
+                    : "bg-slate-100 opacity-60 hover:opacity-100 hover:bg-slate-200"
+                )}
+                style={{ height: `${item.rate}%` }}
+              />
+            </div>
+            <span className="text-[10px] font-black text-slate-300 uppercase">{item.label}</span>
+          </div>
+        ))}
       </div>
-      
+
       <AnimatePresence>
         {hoveredIdx !== null && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -556,7 +596,7 @@ function AttendanceTrendChart({ history }: { history?: Array<{ id: string; date:
           >
             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{data[hoveredIdx].label}</span>
             <span className="text-sm font-black text-white mt-0.5">{data[hoveredIdx].rate}% Attendance</span>
-            <span className="text-[9px] text-slate-300 font-medium">{"attendeeCount" in data[hoveredIdx] ? data[hoveredIdx].attendeeCount : 0} members present</span>
+            <span className="text-[9px] text-slate-300 font-medium">{data[hoveredIdx].attendeeCount} members present</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -564,8 +604,8 @@ function AttendanceTrendChart({ history }: { history?: Array<{ id: string; date:
   );
 }
 
-function DuesTrendChart({ history }: { history?: Array<{ month: string; amount: number }> }) {
-  const defaultHistory = [
+function DuesTrendChart({ history, view = "month" }: { history?: Array<{ month: string; amount: number }>; view?: "week" | "month" }) {
+  const fallback = [
     { month: "Jan", amount: 800 },
     { month: "Feb", amount: 1200 },
     { month: "Mar", amount: 950 },
@@ -573,53 +613,52 @@ function DuesTrendChart({ history }: { history?: Array<{ month: string; amount: 
     { month: "May", amount: 1800 },
     { month: "Jun", amount: 2400 },
   ];
-  
-  const data = history && history.length > 0 ? history : defaultHistory;
+
+  const allData = history && history.length > 0 ? history : fallback;
+  const data = view === "week" ? allData.slice(-4) : allData;
   const maxAmount = Math.max(...data.map(d => d.amount), 1);
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-  
+
   return (
     <div className="relative w-full h-32 mt-4">
       <div className="flex items-end justify-between gap-2 h-28 border-b border-slate-50 pb-2">
-        {data.map((item, i) => {
-          const heightPercent = `${(item.amount / maxAmount) * 85}%`;
-          return (
-            <div 
-              key={i} 
-              className="flex-1 flex flex-col items-center gap-2 group cursor-pointer relative"
-              onMouseEnter={() => setHoveredIdx(i)}
-              onMouseLeave={() => setHoveredIdx(null)}
-            >
-              <div className="w-full relative h-20 flex items-end">
-                <motion.div 
-                  initial={{ scaleY: 0 }}
-                  animate={{ scaleY: 1 }}
-                  transition={{ duration: 0.5, delay: i * 0.05 }}
-                  className={clsx(
-                    "w-full rounded-t-md transition-all duration-300 origin-bottom shadow-sm",
-                    hoveredIdx === i 
-                      ? "bg-gradient-to-t from-emerald-600 to-teal-400 shadow-md shadow-emerald-500/20" 
-                      : "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 opacity-80"
-                  )} 
-                  style={{ height: heightPercent }}
-                />
-              </div>
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{item.month}</span>
+        {data.map((item, i) => (
+          <div
+            key={`${view}-${i}`}
+            className="flex-1 flex flex-col items-center gap-2 group cursor-pointer relative"
+            onMouseEnter={() => setHoveredIdx(i)}
+            onMouseLeave={() => setHoveredIdx(null)}
+          >
+            <div className="w-full relative h-20 flex items-end">
+              <motion.div
+                key={`${view}-bar-${i}`}
+                initial={{ scaleY: 0 }}
+                animate={{ scaleY: 1 }}
+                transition={{ duration: 0.45, delay: i * 0.05 }}
+                className={clsx(
+                  "w-full rounded-t-md transition-colors duration-200 origin-bottom shadow-sm",
+                  hoveredIdx === i
+                    ? "bg-emerald-500 shadow-md shadow-emerald-500/20"
+                    : "bg-emerald-100 hover:bg-emerald-200"
+                )}
+                style={{ height: `${(item.amount / maxAmount) * 85}%` }}
+              />
             </div>
-          );
-        })}
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{item.month}</span>
+          </div>
+        ))}
       </div>
-      
+
       <AnimatePresence>
         {hoveredIdx !== null && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-xl z-20 flex flex-col items-center pointer-events-none whitespace-nowrap border border-slate-800"
           >
             <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{data[hoveredIdx].month}</span>
-            <span className="text-xs font-black text-white mt-0.5">GHS {data[hoveredIdx].amount} collected</span>
+            <span className="text-xs font-black text-white mt-0.5">GHS {formatMoney(data[hoveredIdx].amount)} dues</span>
           </motion.div>
         )}
       </AnimatePresence>

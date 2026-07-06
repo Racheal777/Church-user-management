@@ -203,6 +203,16 @@ export function registerMemberRoutes(router: Router) {
     })
   );
 
+  router.get(
+    "/:id",
+    requireAuth,
+    requireRoles(memberManagers),
+    asyncHandler(async (request, response) => {
+      const member = await getMemberOrThrow(String(request.params.id));
+      response.json({ member: serializePrivateMember(member) });
+    })
+  );
+
   router.post(
     "/",
     requireAuth,

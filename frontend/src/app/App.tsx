@@ -15,6 +15,7 @@ import { ManageDuesPage } from "../features/dues/ManageDuesPage";
 import { MyDuesPage } from "../features/dues/MyDuesPage";
 import { LoginPage } from "../features/auth/LoginPage";
 import { MembersPage } from "../features/members/MembersPage";
+import { MemberDetailPage } from "../features/members/MemberDetailPage";
 import { ProfilePage } from "../features/profile/ProfilePage";
 import { TeamsPage } from "../features/teams/TeamsPage";
 import { ReportsPage } from "../features/dashboard/ReportsPage";
@@ -64,6 +65,7 @@ const router = createBrowserRouter([
         element: <ProtectedRoute permission="canManageMembers" />,
         children: [
           { path: "members", element: <MembersPage /> },
+          { path: "members/:id", element: <MemberDetailPage /> },
           { path: "teams", element: <TeamsPage /> },
           { path: "reports", element: <ReportsPage /> },
           { path: "admin/critical-follow-ups", element: <CriticalFollowupsPage /> }

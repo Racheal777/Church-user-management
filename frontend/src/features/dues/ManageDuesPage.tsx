@@ -1,45 +1,26 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  ChevronLeft, 
-  Landmark, 
-  Search, 
-  CreditCard, 
-  TrendingUp, 
-  AlertCircle, 
-  History, 
-  Plus,
+import {
+  Landmark,
+  CreditCard,
   ArrowRight,
   X,
-  ChevronRight,
-  ChevronLeft as ChevronLeftIcon,
-  Download,
-  Calendar as CalendarIcon,
   CheckCircle2,
-  Users,
-  BarChart3,
-  ArrowUpRight,
-  ArrowDownRight
 } from "lucide-react";
-import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { Loader } from "../../components/Loader";
 import { api } from "../../lib/api";
 import { useAuth } from "../../providers/AuthContext";
 import { useToast } from "../../providers/ToastProvider";
-import { MiniBarChart, ProgressRing } from "./dues-visuals";
-import { 
-  currentMonth, 
-  currentYear, 
-  DuesMonthCalendar, 
-  formatDate, 
-  formatMoney, 
-  getYearOptions, 
-  getYearSummary, 
+import {
+  currentMonth,
+  currentYear,
+  DuesMonthCalendar,
+  formatDate,
+  formatMoney,
+  getYearSummary,
   MONTHLY_DUES_AMOUNT,
-  monthNames, 
-  YearFilterChips 
+  monthNames,
 } from "./shared-dues-ui";
 import clsx from "clsx";
 
@@ -50,6 +31,7 @@ export function ManageDuesPage() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [memberYearFilter, setMemberYearFilter] = useState(String(currentYear));
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [graphView, setGraphView] = useState<"month" | "week">("month");
 
   const reportQuery = useQuery({
     queryKey: ["dues-reports"],
@@ -72,7 +54,6 @@ export function ManageDuesPage() {
   const selectedAmountCents = Number.isFinite(selectedAmountValue) ? Math.round(selectedAmountValue * 100) : 0;
   const amountRemainderCents = selectedAmountCents % (MONTHLY_DUES_AMOUNT * 100);
   const monthsCoveredPreview = selectedAmountCents > 0 ? Math.floor(selectedAmountCents / (MONTHLY_DUES_AMOUNT * 100)) : 0;
-  const memberYearOptions = getYearOptions(selectedMemberDuesQuery.data);
   const memberYearSummary = getYearSummary(selectedMemberDuesQuery.data, memberYearFilter);
   
   const outstandingMonths = useMemo(
@@ -115,7 +96,7 @@ export function ManageDuesPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Financial Hub</h1>
-          <p className="text-slate-500 text-sm font-medium">Comparison and collection management.</p>
+          <p className="text-slate-500 text-sm font-medium">Dues management and monthly overview.</p>
         </div>
         <button 
           onClick={() => setIsDrawerOpen(true)}
@@ -129,66 +110,28 @@ export function ManageDuesPage() {
       <div className="grid gap-8 lg:grid-cols-12">
         {/* Left Column: Visual Comparison */}
         <div className="lg:col-span-8 space-y-8">
-          {/* Comparison Graph Card */}
-          <div className="bg-white rounded-2xl p-10 shadow-sm border border-slate-100 overflow-hidden relative group">
+          {/* Dues Graph Card */}
+          <div className="bg-white rounded-2xl p-10 shadow-sm border border-slate-100 overflow-hidden relative">
             <div className="flex justify-between items-center mb-10">
               <div>
-                <h3 className="font-bold text-xs uppercase tracking-[0.2em] text-slate-400 mb-2">Annual Comparison</h3>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-blue-700" />
-                    <span className="text-sm font-bold text-slate-900">2026</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-slate-200" />
-                    <span className="text-sm font-bold text-slate-400">2025</span>
-                  </div>
-                </div>
+                <h3 className="font-bold text-xs uppercase tracking-[0.2em] text-slate-400 mb-2">Monthly Dues</h3>
+                <p className="text-2xl font-black text-slate-900">
+                  GHS {formatMoney(reportQuery.data?.summary.totalReceivedSoFar ?? 0)}
+                  <span className="text-sm font-medium text-slate-400 ml-2">received</span>
+                </p>
               </div>
-              <div className="flex flex-col items-end">
-                <div className="flex items-center gap-1 text-emerald-600 font-bold text-sm">
-                  <ArrowUpRight className="w-4 h-4" />
-                  +12.5%
-                </div>
-                <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">vs Last Year</div>
+              <div className="flex bg-slate-50 p-1 rounded-xl">
+                <button
+                  onClick={() => setGraphView("month")}
+                  className={clsx("px-4 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all", graphView === "month" ? "bg-white text-blue-700 shadow-sm" : "text-slate-400 hover:text-slate-600")}
+                >Month</button>
+                <button
+                  onClick={() => setGraphView("week")}
+                  className={clsx("px-4 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all", graphView === "week" ? "bg-white text-blue-700 shadow-sm" : "text-slate-400 hover:text-slate-600")}
+                >Recent</button>
               </div>
             </div>
-
-            <div className="h-64 flex items-end justify-between gap-2 lg:gap-4 relative">
-               {/* Vertical Grid Lines */}
-               <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-50">
-                  <div className="w-full h-px bg-slate-50"></div>
-                  <div className="w-full h-px bg-slate-50"></div>
-                  <div className="w-full h-px bg-slate-50"></div>
-                  <div className="w-full h-px bg-slate-50"></div>
-               </div>
-
-               {/* Comparison Bars */}
-               {monthNames.map((month, i) => (
-                 <div key={month} className="flex-1 flex flex-col items-center gap-2 group/bar relative">
-                    <div className="flex items-end gap-1 w-full max-w-[40px] h-full justify-center">
-                       {/* 2025 Bar (Light) */}
-                       <motion.div 
-                         initial={{ height: 0 }}
-                         animate={{ height: `${Math.random() * 40 + 20}%` }}
-                         className="w-full bg-slate-100 rounded-t-lg transition-all"
-                       />
-                       {/* 2026 Bar (Primary) */}
-                       <motion.div 
-                         initial={{ height: 0 }}
-                         animate={{ height: `${Math.random() * 60 + 30}%` }}
-                         className="w-full bg-blue-700 rounded-t-lg transition-all group-hover/bar:bg-blue-800 shadow-lg shadow-blue-900/5"
-                       />
-                    </div>
-                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{month.slice(0, 3)}</span>
-                    
-                    {/* Tooltip */}
-                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-xl opacity-0 group-hover/bar:opacity-100 transition-all pointer-events-none z-10 whitespace-nowrap shadow-md">
-                      {month}: GHS 2.4k
-                    </div>
-                 </div>
-               ))}
-            </div>
+            <DuesBarChart history={reportQuery.data?.history} view={graphView} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -401,6 +344,85 @@ export function ManageDuesPage() {
           </>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function DuesBarChart({
+  history,
+  view = "month",
+}: {
+  history?: Array<{ month: string; amount: number }>;
+  view?: "month" | "week";
+}) {
+  const fallback = [
+    { month: "Jan", amount: 320 },
+    { month: "Feb", amount: 480 },
+    { month: "Mar", amount: 400 },
+    { month: "Apr", amount: 560 },
+    { month: "May", amount: 640 },
+    { month: "Jun", amount: 720 },
+  ];
+
+  const allData = history && history.length > 0 ? history : fallback;
+  const data = view === "week" ? allData.slice(-4) : allData;
+  const maxAmount = Math.max(...data.map(d => d.amount), 1);
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
+  return (
+    <div className="relative">
+      <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-6">
+        {[0.75, 0.5, 0.25].map(p => (
+          <div key={p} className="flex items-center gap-3">
+            <span className="text-[9px] font-black text-slate-200 w-10 text-right shrink-0">
+              GHS {formatMoney(maxAmount * p)}
+            </span>
+            <div className="flex-1 h-px bg-slate-50" />
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-end justify-between gap-3 h-52 pl-14 pb-6 border-b border-slate-50">
+        {data.map((item, i) => (
+          <div
+            key={`${view}-${i}`}
+            className="flex-1 flex flex-col items-center gap-2 relative cursor-pointer group"
+            onMouseEnter={() => setHoveredIdx(i)}
+            onMouseLeave={() => setHoveredIdx(null)}
+          >
+            <div className="w-full h-full flex items-end">
+              <motion.div
+                key={`${view}-bar-${i}`}
+                initial={{ scaleY: 0 }}
+                animate={{ scaleY: 1 }}
+                transition={{ duration: 0.45, delay: i * 0.05, ease: "easeOut" }}
+                className={clsx(
+                  "w-full rounded-t-xl origin-bottom transition-colors duration-200",
+                  hoveredIdx === i
+                    ? "bg-blue-700 shadow-lg shadow-blue-900/10"
+                    : "bg-blue-100 group-hover:bg-blue-200"
+                )}
+                style={{ height: `${(item.amount / maxAmount) * 100}%` }}
+              />
+            </div>
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{item.month}</span>
+
+            <AnimatePresence>
+              {hoveredIdx === i && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 6, scale: 0.95 }}
+                  className="absolute -top-14 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold px-3 py-2 rounded-xl shadow-xl z-20 flex flex-col items-center pointer-events-none whitespace-nowrap border border-slate-800"
+                >
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{item.month}</span>
+                  <span className="text-xs font-black text-white mt-0.5">GHS {formatMoney(item.amount)}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
