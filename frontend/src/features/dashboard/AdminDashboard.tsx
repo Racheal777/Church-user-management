@@ -103,8 +103,9 @@ export function AdminDashboard() {
     setStartingSession(true);
     try {
       await api.startAttendanceSession(undefined, accessToken);
-      toast.success({ title: "Attendance started", description: "A new session is live now." });
+      toast.success({ title: "Attendance started", description: "A new attendance is live now." });
       await activeSessionQuery.refetch();
+      navigate("/attendance");
     } catch (error) {
       toast.error({ title: "Error", description: error instanceof Error ? error.message : "Please try again." });
     } finally {
@@ -112,17 +113,17 @@ export function AdminDashboard() {
     }
   }
 
-  async function handleCloseSession() {
+  async function handleCloseAttendance() {
     if (!accessToken || !activeSession?.session) return;
-    const confirmClose = window.confirm("Are you sure you want to close this attendance session?");
+    const confirmClose = window.confirm("Are you sure you want to close this attendance?");
     if (!confirmClose) return;
 
     try {
       await api.closeAttendanceSession(activeSession.session.id, accessToken);
-      toast.success({ title: "Session closed", description: "Attendance session is now finalized." });
+      toast.success({ title: "Attendance closed", description: "Attendance is now finalized." });
       await activeSessionQuery.refetch();
     } catch (error) {
-      toast.error({ title: "Error", description: "Could not close session." });
+      toast.error({ title: "Error", description: "Could not close attendance." });
     }
   }
 
@@ -145,43 +146,29 @@ export function AdminDashboard() {
       {/* Header with Stats Summary */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-black tracking-tight text-slate-900">Admin Command Center</h1>
-          <p className="text-slate-500 font-medium text-sm">Real-time fellowship growth and engagement monitoring.</p>
+          <h1 className="text-4xl font-black tracking-tight text-slate-900">Admin Dashboard</h1>
+          
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => setShowAnnouncementModal(true)}
-            className="inline-flex items-center gap-3 px-6 py-3 rounded-xl font-bold uppercase tracking-widest text-xs bg-slate-900 text-white shadow-lg shadow-slate-900/10 hover:bg-slate-800 active:scale-95 transition-all"
+            className="inline-flex items-center gap-3 px-6 py-3.5 rounded-2xl font-black uppercase tracking-widest text-xs bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-white shadow-lg shadow-slate-950/20 active:scale-95 transition-all cursor-pointer border border-slate-800/10"
           >
             <Megaphone className="w-4 h-4" />
             Post Notice
           </button>
           
-          {member?.permissions.canManageAttendance && (
-            <button
-              onClick={handleStartAttendance}
-              disabled={startingSession || !!activeSession?.session}
-              className={clsx(
-                "inline-flex items-center gap-3 px-6 py-3 rounded-xl font-bold uppercase tracking-widest text-xs transition-all shadow-lg",
-                activeSession?.session 
-                  ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none" 
-                  : "bg-blue-700 text-white shadow-blue-900/10 hover:bg-blue-800 active:scale-95"
-              )}
-            >
-              <Zap className="w-4 h-4" />
-              {startingSession ? "Starting..." : "+ Session"}
-            </button>
-          )}
+          
         </div>
       </div>
 
       {/* Main Tabs Navigation */}
-      <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl w-fit border border-slate-100">
+      <div className="flex items-center gap-2 bg-slate-100/60 p-1.5 rounded-2xl w-fit border border-slate-200/40">
         <button
           onClick={() => setActiveTab("insights")}
           className={clsx(
-            "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
+            "flex items-center gap-2 px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
             activeTab === "insights" ? "bg-white text-blue-700 shadow-sm" : "text-slate-400 hover:text-slate-600"
           )}
         >
@@ -191,7 +178,7 @@ export function AdminDashboard() {
         <button
           onClick={() => setActiveTab("announcements")}
           className={clsx(
-            "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
+            "flex items-center gap-2 px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
             activeTab === "announcements" ? "bg-white text-blue-700 shadow-sm" : "text-slate-400 hover:text-slate-600"
           )}
         >
@@ -250,7 +237,7 @@ export function AdminDashboard() {
                          <button className="px-4 py-1.5 text-[10px] font-black uppercase rounded-md bg-white text-blue-700 shadow-sm">Month</button>
                       </div>
                    </div>
-                   <AttendanceTrendChart />
+                   <AttendanceTrendChart history={attendanceReport?.history} />
                 </section>
 
                 <div className="grid gap-6 md:grid-cols-2">
@@ -282,14 +269,12 @@ export function AdminDashboard() {
                          <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Collections</h3>
                          <Target className="w-4 h-4 text-blue-600" />
                       </div>
-                      <div className="flex-1 flex flex-col justify-center items-center py-6">
-                         <div className="relative w-40 h-20 mb-4 overflow-hidden">
-                            <div className="absolute top-0 left-0 w-40 h-40 rounded-full border-[12px] border-slate-100"></div>
-                            <div className="absolute top-0 left-0 w-40 h-40 rounded-full border-[12px] border-blue-700 transition-all duration-1000" style={{ clipPath: `polygon(0 0, 100% 0, 100% 100%, 0 ${100 - collectionsPercent}%)` }}></div>
-                            <div className="absolute inset-0 bg-white" style={{ clipPath: 'polygon(0 50%, 100% 50%, 100% 100%, 0 100%)' }}></div>
+                      <div className="flex-1 flex flex-col justify-between py-2">
+                         <DuesTrendChart history={duesReport?.history} />
+                         <div className="mt-4 text-center">
+                            <p className="text-2xl font-black text-slate-900 tracking-tight">GHS {formatMoney(receivedAmount)} <span className="text-xs font-medium text-slate-400">received</span></p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">of GHS {formatMoney(yearlyTarget)} yearly target</p>
                          </div>
-                         <p className="text-2xl font-black text-slate-900 tracking-tight">GHS {formatMoney(receivedAmount)} <span className="text-xs font-medium text-slate-400">received</span></p>
-                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">of GHS {formatMoney(yearlyTarget)} yearly target</p>
                       </div>
                       <div className="mt-6 pt-6 border-t border-slate-50 space-y-3">
                          <div className="flex justify-between items-center">
@@ -306,39 +291,43 @@ export function AdminDashboard() {
               </div>
 
               <div className="space-y-6">
-                <section className="bg-slate-900 rounded-2xl p-8 text-white relative overflow-hidden shadow-xl shadow-blue-900/10">
-                   <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 rounded-full blur-3xl -mr-16 -mt-16"></div>
-                   <div className="relative z-10">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-6 flex items-center gap-2">
-                         <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></div>
-                         Live Attendance
-                      </p>
-                      {activeSession?.session ? (
-                        <div className="space-y-6">
-                          <h2 className="text-4xl font-black tracking-tight">{formatCountdown(activeSession.secondsRemaining ?? 0)}</h2>
-                          <p className="text-xs font-bold text-blue-100/60 uppercase tracking-widest">{activeSession.session.attendeeCount} Members Checked In</p>
-                          <div className="flex gap-3">
-                             <Link to="/attendance" className="flex-1 inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all">
-                                <Eye className="w-4 h-4" />
-                                View
-                             </Link>
-                             <button onClick={handleCloseSession} className="flex-1 inline-flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all">
-                                <XCircle className="w-4 h-4" />
-                                Close
-                             </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-6">
-                          <p className="text-sm font-medium text-slate-400 leading-relaxed">No active session. Ready to take attendance for today's fellowship?</p>
-                          <button onClick={handleStartAttendance} disabled={startingSession} className="w-full inline-flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-900/40">
-                             <Play className="w-4 h-4" />
-                             Start Attendance
-                          </button>
-                        </div>
-                      )}
-                   </div>
-                </section>
+                 <section className="bg-slate-900 rounded-2xl p-8 text-white relative overflow-hidden shadow-xl shadow-blue-900/10">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 rounded-full blur-3xl -mr-16 -mt-16"></div>
+                    <div className="relative z-10">
+                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-6 flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></div>
+                          Live Attendance
+                       </p>
+                       {activeSession?.session ? (
+                         <div className="space-y-6">
+                           <h2 className="text-4xl font-black tracking-tight">{formatCountdown(activeSession.secondsRemaining ?? 0)}</h2>
+                           <p className="text-xs font-bold text-blue-100/60 uppercase tracking-widest">{activeSession.session.attendeeCount} Members Checked In</p>
+                           <div className="flex gap-3">
+                              <Link to="/attendance" className="flex-1 inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all border border-white/5 active:scale-95">
+                                 <Eye className="w-4 h-4" />
+                                 View
+                              </Link>
+                              <button onClick={() => void handleCloseAttendance()} className="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-md active:scale-95 cursor-pointer">
+                                 <XCircle className="w-4 h-4" />
+                                 Close
+                              </button>
+                           </div>
+                         </div>
+                       ) : (
+                         <div className="space-y-6">
+                           <p className="text-sm font-medium text-slate-400 leading-relaxed">No active attendance. Ready to take attendance for today's fellowship?</p>
+                           <button 
+                             onClick={() => void handleStartAttendance()} 
+                             disabled={startingSession} 
+                             className="w-full inline-flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-900/30 active:scale-98 cursor-pointer"
+                           >
+                              <Play className="w-4 h-4" />
+                              Start Attendance
+                           </button>
+                         </div>
+                       )}
+                    </div>
+                 </section>
 
                 <section className="bg-white rounded-2xl border border-slate-100 p-8 shadow-sm">
                    <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-8">Quick Launch</h3>
@@ -346,7 +335,7 @@ export function AdminDashboard() {
                       <QuickLaunchItem 
                         to="/attendance"
                         title="Attendance Hub" 
-                        subtitle={activeSession?.session ? `Session active · ${activeSession.session.attendeeCount} in` : "No session today"}
+                        subtitle={activeSession?.session ? `Attendance active · ${activeSession.session.attendeeCount} in` : "No attendance today"}
                         icon={<Activity className="w-5 h-5" />} 
                         color="bg-blue-50 text-blue-700" 
                       />
@@ -391,7 +380,7 @@ export function AdminDashboard() {
                </div>
                <button 
                  onClick={() => setShowAnnouncementModal(true)}
-                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold uppercase tracking-widest text-[10px] bg-blue-700 text-white shadow-lg shadow-blue-900/10 hover:bg-blue-800 transition-all active:scale-95"
+                 className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl font-black uppercase tracking-widest text-[10px] bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-900/20 transition-all active:scale-95 cursor-pointer"
                >
                  <Plus className="w-3.5 h-3.5" />
                  Create New
@@ -508,32 +497,132 @@ export function AdminDashboard() {
   );
 }
 
-function AttendanceTrendChart() {
-  const trendValues = [45, 52, 48, 61, 55, 68, 72, 65];
-  const trendMonths = ["S", "M", "T", "W", "T", "F", "S", "S"];
+function AttendanceTrendChart({ history }: { history?: Array<{ id: string; date: string; label: string; attendeeCount: number; rate: number }> }) {
+  const defaultHistory = [
+    { label: "S", rate: 45, attendeeCount: 18 },
+    { label: "M", rate: 52, attendeeCount: 21 },
+    { label: "T", rate: 48, attendeeCount: 19 },
+    { label: "W", rate: 61, attendeeCount: 25 },
+    { label: "T", rate: 55, attendeeCount: 22 },
+    { label: "F", rate: 68, attendeeCount: 28 },
+    { label: "S", rate: 72, attendeeCount: 30 },
+    { label: "S", rate: 65, attendeeCount: 26 },
+  ];
+  
+  const data = history && history.length > 0 ? history : defaultHistory;
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   
   return (
-    <div className="flex items-end justify-between gap-2 h-40 mt-8">
-       {trendValues.map((v, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center gap-3 group">
-             <div className="w-full relative">
-                <div 
+    <div className="relative mt-8">
+      <div className="flex items-end justify-between gap-2 h-40 border-b border-slate-100 pb-2">
+         {data.map((item, i) => {
+            const heightPercent = `${item.rate}%`;
+            return (
+               <div 
+                 key={i} 
+                 className="flex-1 flex flex-col items-center gap-3 group relative cursor-pointer"
+                 onMouseEnter={() => setHoveredIdx(i)}
+                 onMouseLeave={() => setHoveredIdx(null)}
+               >
+                  <div className="w-full relative h-32 flex items-end">
+                     <motion.div 
+                       initial={{ scaleY: 0 }}
+                       animate={{ scaleY: 1 }}
+                       transition={{ duration: 0.5, delay: i * 0.05 }}
+                       className={clsx(
+                         "w-full rounded-t-lg transition-all duration-300 origin-bottom shadow-sm",
+                         hoveredIdx === i 
+                           ? "bg-gradient-to-t from-blue-700 to-indigo-500 shadow-md shadow-blue-500/20" 
+                           : i === data.length - 1
+                             ? "bg-gradient-to-t from-blue-600 to-indigo-400 shadow-md shadow-blue-500/10"
+                             : "bg-slate-100 opacity-60 hover:opacity-100 hover:bg-slate-200"
+                       )} 
+                       style={{ height: heightPercent }}
+                     />
+                  </div>
+                  <span className="text-[10px] font-black text-slate-300 uppercase">{item.label}</span>
+               </div>
+            );
+         })}
+      </div>
+      
+      <AnimatePresence>
+        {hoveredIdx !== null && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            className="absolute -top-16 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xl z-20 flex flex-col items-center pointer-events-none min-w-[140px] border border-slate-800"
+          >
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{data[hoveredIdx].label}</span>
+            <span className="text-sm font-black text-white mt-0.5">{data[hoveredIdx].rate}% Attendance</span>
+            <span className="text-[9px] text-slate-300 font-medium">{"attendeeCount" in data[hoveredIdx] ? data[hoveredIdx].attendeeCount : 0} members present</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function DuesTrendChart({ history }: { history?: Array<{ month: string; amount: number }> }) {
+  const defaultHistory = [
+    { month: "Jan", amount: 800 },
+    { month: "Feb", amount: 1200 },
+    { month: "Mar", amount: 950 },
+    { month: "Apr", amount: 1500 },
+    { month: "May", amount: 1800 },
+    { month: "Jun", amount: 2400 },
+  ];
+  
+  const data = history && history.length > 0 ? history : defaultHistory;
+  const maxAmount = Math.max(...data.map(d => d.amount), 1);
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  
+  return (
+    <div className="relative w-full h-32 mt-4">
+      <div className="flex items-end justify-between gap-2 h-28 border-b border-slate-50 pb-2">
+        {data.map((item, i) => {
+          const heightPercent = `${(item.amount / maxAmount) * 85}%`;
+          return (
+            <div 
+              key={i} 
+              className="flex-1 flex flex-col items-center gap-2 group cursor-pointer relative"
+              onMouseEnter={() => setHoveredIdx(i)}
+              onMouseLeave={() => setHoveredIdx(null)}
+            >
+              <div className="w-full relative h-20 flex items-end">
+                <motion.div 
+                  initial={{ scaleY: 0 }}
+                  animate={{ scaleY: 1 }}
+                  transition={{ duration: 0.5, delay: i * 0.05 }}
                   className={clsx(
-                    "w-full rounded-full transition-all duration-700 group-hover:scale-y-110 group-hover:opacity-100 origin-bottom",
-                    i === trendValues.length - 2 ? "bg-blue-700 shadow-lg shadow-blue-900/20" : "bg-slate-100 opacity-60"
+                    "w-full rounded-t-md transition-all duration-300 origin-bottom shadow-sm",
+                    hoveredIdx === i 
+                      ? "bg-gradient-to-t from-emerald-600 to-teal-400 shadow-md shadow-emerald-500/20" 
+                      : "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 opacity-80"
                   )} 
-                  style={{ height: `${(v / 80) * 100}%` }}
-                >
-                  {i === trendValues.length - 2 && (
-                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-black px-2 py-1 rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity">
-                      {v}%
-                    </div>
-                  )}
-                </div>
-             </div>
-             <span className="text-[10px] font-black text-slate-300 uppercase">{trendMonths[i]}</span>
-          </div>
-       ))}
+                  style={{ height: heightPercent }}
+                />
+              </div>
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{item.month}</span>
+            </div>
+          );
+        })}
+      </div>
+      
+      <AnimatePresence>
+        {hoveredIdx !== null && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-xl z-20 flex flex-col items-center pointer-events-none whitespace-nowrap border border-slate-800"
+          >
+            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{data[hoveredIdx].month}</span>
+            <span className="text-xs font-black text-white mt-0.5">GHS {data[hoveredIdx].amount} collected</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -699,14 +788,14 @@ function PostAnnouncementModal({ onClose, accessToken, editingAnnouncement }: { 
              <button
                type="button"
                onClick={onClose}
-               className="flex-1 rounded-2xl border-2 border-slate-100 py-4 text-xs font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50 transition-all"
+               className="flex-1 rounded-2xl border-2 border-slate-100 py-4 text-xs font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-all cursor-pointer"
              >
                Cancel
              </button>
              <button
                disabled={loading}
                type="submit"
-               className="flex-[2] rounded-2xl bg-[#1a56db] py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-blue-900/20 hover:bg-blue-800 active:scale-95 transition-all flex items-center justify-center gap-2"
+               className="flex-[2] rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-blue-900/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
              >
                {loading ? "Saving..." : (
                  <>

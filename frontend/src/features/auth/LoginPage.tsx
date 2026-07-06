@@ -55,7 +55,7 @@ export function LoginPage() {
       await verifyOtp(normalizedPhoneNumber, nextOtpCode);
       toast.success({
         title: "Welcome Back!",
-        description: "Your session is ready."
+        description: "You have successfully logged in."
       });
       navigate("/");
     } catch (error) {
@@ -103,7 +103,7 @@ export function LoginPage() {
                  <img src="/logo.png" alt="YPG Logo" className="w-full h-full object-contain" />
               </div>
               <div>
-                <span className="block text-[160px] font-black tracking-tighter text-slate-900 leading-[0.8] mb-4">YPG</span>
+                <span className="block text-[50px] font-black tracking-tighter text-slate-900 leading-[0.8] mb-4">YPG</span>
                 <span className="block text-xl font-black text-slate-400 uppercase tracking-[0.4em]">Service All The Way</span>
                 <p className="mt-8 text-lg text-slate-500 font-medium leading-relaxed">
                   Welcome back to the fellowship

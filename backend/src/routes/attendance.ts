@@ -433,6 +433,18 @@ export function registerAttendanceRoutes(router: Router) {
         )
       ).sort((left, right) => right.score - left.score);
 
+      const history = [...sessions].slice(0, 8).reverse().map((session) => {
+        const attendeeCount = session.attendanceRecords.length;
+        const rate = activeMembers.length ? attendeeCount / activeMembers.length : 0;
+        return {
+          id: session.id,
+          date: session.meeting_date.toISOString().split("T")[0],
+          label: session.meeting_date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+          attendeeCount,
+          rate: Math.round(rate * 100)
+        };
+      });
+
       response.json({
         summary: {
           weeklyAttendanceRate: weeklyRate,
@@ -440,7 +452,8 @@ export function registerAttendanceRoutes(router: Router) {
           totalSessions: sessions.length
         },
         absentThreePlus,
-        leaderboard
+        leaderboard,
+        history
       });
     })
   );

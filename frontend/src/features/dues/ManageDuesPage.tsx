@@ -37,8 +37,8 @@ import {
   formatMoney, 
   getYearOptions, 
   getYearSummary, 
+  MONTHLY_DUES_AMOUNT,
   monthNames, 
-  WEEKLY_DUES_AMOUNT, 
   YearFilterChips 
 } from "./shared-dues-ui";
 import clsx from "clsx";
@@ -58,7 +58,7 @@ export function ManageDuesPage() {
   });
   const membersQuery = useQuery({
     queryKey: ["finance-members"],
-    queryFn: () => api.listMembers({}, accessToken!),
+    queryFn: () => api.listMembers({ activeStatus: "all" }, accessToken!),
     enabled: Boolean(member?.permissions.canManageFinance && accessToken)
   });
   const selectedMemberDuesQuery = useQuery({
@@ -70,19 +70,19 @@ export function ManageDuesPage() {
   const selectedMember = membersQuery.data?.members.find((item) => item.id === selectedMemberId) ?? null;
   const selectedAmountValue = Number(paymentAmount);
   const selectedAmountCents = Number.isFinite(selectedAmountValue) ? Math.round(selectedAmountValue * 100) : 0;
-  const amountRemainderCents = selectedAmountCents % (WEEKLY_DUES_AMOUNT * 100);
-  const weeksCoveredPreview = selectedAmountCents > 0 ? Math.floor(selectedAmountCents / (WEEKLY_DUES_AMOUNT * 100)) : 0;
+  const amountRemainderCents = selectedAmountCents % (MONTHLY_DUES_AMOUNT * 100);
+  const monthsCoveredPreview = selectedAmountCents > 0 ? Math.floor(selectedAmountCents / (MONTHLY_DUES_AMOUNT * 100)) : 0;
   const memberYearOptions = getYearOptions(selectedMemberDuesQuery.data);
   const memberYearSummary = getYearSummary(selectedMemberDuesQuery.data, memberYearFilter);
   
-  const outstandingWeeks = useMemo(
+  const outstandingMonths = useMemo(
     () =>
       [...(selectedMemberDuesQuery.data?.ledger.filter((entry) => entry.status !== "paid") ?? [])].sort(
         (left, right) => new Date(left.weekOf).getTime() - new Date(right.weekOf).getTime()
       ),
     [selectedMemberDuesQuery.data?.ledger]
   );
-  const projectedWeeks = outstandingWeeks.slice(0, weeksCoveredPreview);
+  const projectedMonths = outstandingMonths.slice(0, monthsCoveredPreview);
 
   async function recordCashPayment() {
     if (!accessToken || !selectedMemberId || !paymentAmount) return;
@@ -91,14 +91,14 @@ export function ManageDuesPage() {
       return;
     }
     if (amountRemainderCents !== 0) {
-      toast.error({ title: "Error", description: `Dues are GHS ${WEEKLY_DUES_AMOUNT.toFixed(2)} increments.` });
+      toast.error({ title: "Error", description: `Dues are GHS ${MONTHLY_DUES_AMOUNT.toFixed(2)} increments.` });
       return;
     }
     try {
       const result = await api.recordCashPayment({ memberId: selectedMemberId, amount: selectedAmountValue }, accessToken);
       toast.success({
         title: "Success",
-        description: `GHS ${result.amountApplied.toFixed(2)} recorded for ${result.weeksCovered} weeks.`
+        description: `GHS ${result.amountApplied.toFixed(2)} recorded for ${result.monthsCovered ?? result.weeksCovered} months.`
       });
       setPaymentAmount("");
       setIsDrawerOpen(false);
@@ -269,21 +269,6 @@ export function ManageDuesPage() {
                 ))}
              </div>
           </div>
-
-          <div className="bg-white rounded-2xl p-10 shadow-sm border border-slate-100 border-red-100 bg-red-50/10">
-             <div className="flex items-center gap-3 text-red-600 mb-8">
-               <AlertCircle className="w-5 h-5" />
-               <h3 className="font-bold text-xs uppercase tracking-[0.25em] text-red-500">Critical Alerts</h3>
-             </div>
-             <div className="space-y-4">
-                {(reportQuery.data?.alerts?.twoMonthsOutstanding ?? []).slice(0, 3).map((item: any) => (
-                 <div key={item.memberId} className="p-4 rounded-2xl bg-white border border-red-100 text-red-900 flex justify-between items-center shadow-sm">
-                   <div className="text-xs font-bold">{item.firstName} {item.lastName}</div>
-                   <div className="text-[8px] font-black bg-red-100 text-red-700 px-2 py-0.5 rounded-lg">-{item.outstandingWeeks} WKS</div>
-                 </div>
-               ))}
-             </div>
-          </div>
         </div>
       </div>
 
@@ -367,8 +352,8 @@ export function ManageDuesPage() {
                            <input
                               className="w-full bg-slate-50 border-none rounded-2xl px-6 py-5 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-2xl font-black text-blue-900 placeholder:text-slate-200"
                               type="number"
-                              min={WEEKLY_DUES_AMOUNT}
-                              step={WEEKLY_DUES_AMOUNT}
+                              min={MONTHLY_DUES_AMOUNT}
+                              step={MONTHLY_DUES_AMOUNT}
                               value={paymentAmount}
                               placeholder="0.00"
                               onChange={(event) => setPaymentAmount(event.target.value)}
@@ -381,12 +366,12 @@ export function ManageDuesPage() {
                              amountRemainderCents !== 0 ? "bg-red-50 border-red-100 text-red-600" : "bg-blue-50 border-blue-100 text-blue-700"
                            )}>
                               {amountRemainderCents !== 0 ? (
-                                 <p className="text-xs font-bold">Please enter a multiple of GHS {WEEKLY_DUES_AMOUNT.toFixed(2)}</p>
+                                 <p className="text-xs font-bold">Please enter a multiple of GHS {MONTHLY_DUES_AMOUNT.toFixed(2)}</p>
                               ) : (
                                  <div className="space-y-4">
-                                    <p className="text-xs font-bold uppercase tracking-widest">Allocating to {weeksCoveredPreview} weeks:</p>
+                                    <p className="text-xs font-bold uppercase tracking-widest">Allocating to {monthsCoveredPreview} months:</p>
                                     <div className="flex flex-wrap gap-2">
-                                       {projectedWeeks.map((week) => (
+                                       {projectedMonths.map((week) => (
                                           <span key={week.id} className="text-[8px] font-black uppercase tracking-widest bg-white px-2 py-1 rounded-md border border-blue-100">
                                              {formatDate(week.weekOf)}
                                           </span>

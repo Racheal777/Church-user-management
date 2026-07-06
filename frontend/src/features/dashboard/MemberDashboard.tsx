@@ -194,11 +194,11 @@ export function MemberDashboard() {
               <div className="relative z-10 space-y-6">
                 <div>
                   <h2 className="text-2xl font-black tracking-tight">It's meeting time!</h2>
-                  <p className="text-blue-100 font-medium text-sm">Session is live — check in now</p>
+                  <p className="text-blue-100 font-medium text-sm">Attendance is live — check in now</p>
                 </div>
                 <Link 
                   to="/check-in" 
-                  className="flex w-full items-center justify-center gap-3 rounded-2xl bg-white py-4 text-sm font-black uppercase tracking-widest text-[#1a56db] transition-all hover:scale-[1.02] active:scale-95 shadow-lg"
+                  className="flex w-full items-center justify-center gap-3 rounded-2xl bg-white py-4 text-sm font-black uppercase tracking-widest text-[#1a56db] transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-blue-900/10 cursor-pointer"
                 >
                   <Zap className="h-5 w-5 fill-current" />
                   CHECK IN NOW
@@ -213,7 +213,7 @@ export function MemberDashboard() {
                 </div>
                 <div>
                   <h2 className="font-bold text-slate-900">Meeting day 📅</h2>
-                  <p className="text-xs text-slate-500 font-medium">Session hasn't started yet. Check back soon.</p>
+                  <p className="text-xs text-slate-500 font-medium">Attendance hasn't started yet. Check back soon.</p>
                 </div>
               </div>
             </div>

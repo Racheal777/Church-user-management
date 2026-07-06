@@ -27,6 +27,8 @@ export type Member = {
   phoneNumber?: string;
   whatsappNumber?: string | null;
   email?: string | null;
+  location?: string | null;
+  notes?: string | null;
   dateOfBirth?: string | null;
   maritalStatus?: "single" | "married" | "divorced" | "widowed" | null;
   dateJoined?: string | null;
@@ -58,7 +60,10 @@ export type DuesLedgerItem = {
   id: string;
   memberId: string;
   weekOf: string;
+  periodOf?: string;
   weekNumber: number;
+  monthNumber?: number;
+  monthName?: string;
   amount: number;
   status: "paid" | "unpaid" | "advance";
   method: string | null;
@@ -74,6 +79,9 @@ export type DuesLedgerResponse = {
     weeksPaid: number;
     weeksBehind: number;
     totalWeeks: number;
+    monthsPaid?: number;
+    monthsBehind?: number;
+    totalMonths?: number;
     statusMessage: string;
   };
   annualBreakdown: Array<{
@@ -83,6 +91,9 @@ export type DuesLedgerResponse = {
     totalWeeks: number;
     weeksPaid: number;
     weeksPending: number;
+    totalMonths?: number;
+    monthsPaid?: number;
+    monthsPending?: number;
   }>;
 };
 
@@ -103,6 +114,13 @@ export type AttendanceReport = {
     teamName: string;
     color: string;
     score: number;
+  }>;
+  history?: Array<{
+    id: string;
+    date: string;
+    label: string;
+    attendeeCount: number;
+    rate: number;
   }>;
 };
 
@@ -128,9 +146,14 @@ export type DuesReport = {
       firstName: string;
       lastName: string;
       outstandingWeeks: number;
+      outstandingMonths?: number;
       amountOwed: number;
     }>;
   };
+  history?: Array<{
+    month: string;
+    amount: number;
+  }>;
 };
 
 export type Announcement = {
@@ -328,14 +351,14 @@ export const api = {
     const suffix = memberId ? `?memberId=${memberId}` : "";
     return request<DuesLedgerResponse>(`/api/dues${suffix}`, {}, accessToken);
   },
-  initiateMomoPayment(body: { member_id: string; week_dates: string[]; total_amount: number }, accessToken: string) {
+  initiateMomoPayment(body: { member_id: string; month_dates?: string[]; week_dates?: string[]; total_amount: number }, accessToken: string) {
     return request<{ authorization_url: string; reference: string }>("/api/dues/momo/initiate", {
       method: "POST",
       body: JSON.stringify(body)
     }, accessToken);
   },
-  recordCashPayment(body: { memberId?: string; phoneNumber?: string; weeks?: string[]; amount?: number }, accessToken: string) {
-    return request<{ payments: Array<{ id: string }>; amountApplied: number; weeksCovered: number }>("/api/dues/cash", {
+  recordCashPayment(body: { memberId?: string; phoneNumber?: string; months?: string[]; weeks?: string[]; amount?: number }, accessToken: string) {
+    return request<{ payments: Array<{ id: string }>; amountApplied: number; monthsCovered?: number; weeksCovered: number }>("/api/dues/cash", {
       method: "POST",
       body: JSON.stringify(body)
     }, accessToken);

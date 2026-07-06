@@ -15,14 +15,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { api, type DuesLedgerItem } from "../../lib/api";
 import { useAuth } from "../../providers/AuthContext";
 import { useToast } from "../../providers/ToastProvider";
-import { formatMoney } from "./shared-dues-ui";
+import { formatMoney, MONTHLY_DUES_AMOUNT } from "./shared-dues-ui";
 import clsx from "clsx";
 
 export function MyDuesPage() {
   const { member, accessToken } = useAuth();
   const toast = useToast();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedWeeks, setSelectedWeeks] = useState<string[]>([]);
+  const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   const [isDownloading, setIsDownloading] = useState(false);
 
   const duesQuery = useQuery({
@@ -36,7 +36,7 @@ export function MyDuesPage() {
   const annualBreakdown = duesQuery.data?.annualBreakdown || [];
   const years = annualBreakdown.map(b => b.year);
 
-  const sortedWeeks = useMemo(() => {
+  const sortedMonths = useMemo(() => {
     const now = new Date();
     return [...ledger]
       .filter(item => new Date(item.weekOf).getUTCFullYear() === selectedYear)
@@ -55,12 +55,12 @@ export function MyDuesPage() {
       });
   }, [ledger, selectedYear]);
 
-  const visibleWeeks = useMemo(() => {
+  const visibleMonths = useMemo(() => {
     const defaultCount = 5;
-    const requiredCount = selectedWeeks.length;
+    const requiredCount = selectedMonths.length;
     const showCount = Math.max(defaultCount, requiredCount);
-    return sortedWeeks.slice(0, showCount);
-  }, [sortedWeeks, selectedWeeks]);
+    return sortedMonths.slice(0, showCount);
+  }, [sortedMonths, selectedMonths]);
 
   const yearSummary = useMemo(() => {
     return annualBreakdown.find(b => b.year === selectedYear);
@@ -68,46 +68,45 @@ export function MyDuesPage() {
 
   const [customAmount, setCustomAmount] = useState("");
 
-  const toggleWeek = (weekOf: string) => {
-    if (selectedWeeks.includes(weekOf)) {
-      setSelectedWeeks(selectedWeeks.filter(w => w !== weekOf));
+  const toggleMonth = (monthOf: string) => {
+    if (selectedMonths.includes(monthOf)) {
+      setSelectedMonths(selectedMonths.filter(w => w !== monthOf));
     } else {
-      setSelectedWeeks([...selectedWeeks, weekOf]);
+      setSelectedMonths([...selectedMonths, monthOf]);
     }
   };
 
   const handleAmountChange = (val: string) => {
-    setCustomAmount(val);
+      setCustomAmount(val);
     const amount = parseFloat(val);
     if (isNaN(amount) || amount <= 0) {
-      setSelectedWeeks([]);
+      setSelectedMonths([]);
       return;
     }
 
-    const weekCount = Math.floor(amount / 2.00);
-    if (weekCount === 0) {
-      setSelectedWeeks([]);
+    const monthCount = Math.floor(amount / MONTHLY_DUES_AMOUNT);
+    if (monthCount === 0) {
+      setSelectedMonths([]);
       return;
     }
 
-    // Select N oldest unpaid weeks across ALL years in the ledger
     const allUnpaid = [...ledger]
       .filter(w => w.status === "unpaid")
       .sort((a, b) => new Date(a.weekOf).getTime() - new Date(b.weekOf).getTime());
 
-    const toSelect = allUnpaid.slice(0, weekCount).map(w => w.weekOf);
-    setSelectedWeeks(toSelect);
+    const toSelect = allUnpaid.slice(0, monthCount).map(w => w.weekOf);
+    setSelectedMonths(toSelect);
   };
 
-  const totalSelected = selectedWeeks.length * 2.00;
+  const totalSelected = selectedMonths.length * MONTHLY_DUES_AMOUNT;
 
   async function handlePayment() {
-    if (!accessToken || !member || selectedWeeks.length === 0) return;
+    if (!accessToken || !member || selectedMonths.length === 0) return;
     
     try {
       const { authorization_url } = await api.initiateMomoPayment({
         member_id: member.id,
-        week_dates: selectedWeeks.sort((a, b) => new Date(a).getTime() - new Date(b).getTime()),
+        month_dates: selectedMonths.sort((a, b) => new Date(a).getTime() - new Date(b).getTime()),
         total_amount: totalSelected
       }, accessToken);
       
@@ -145,7 +144,7 @@ export function MyDuesPage() {
     );
   }
 
-  const isAllPaid = (yearSummary?.weeksPending || 0) === 0;
+  const isAllPaid = (yearSummary?.monthsPending ?? yearSummary?.weeksPending ?? 0) === 0;
 
   return (
     <div className="mx-auto max-w-lg space-y-8 pb-32 animate-in fade-in slide-in-from-bottom-8 duration-700">
@@ -158,7 +157,7 @@ export function MyDuesPage() {
                 Back
               </Link>
               <h1 className="text-3xl font-black text-slate-900 tracking-tight">My Dues</h1>
-              <p className="text-slate-500 text-xs font-medium">Track and settle your weekly contributions.</p>
+             
            </div>
            <div className="flex bg-slate-100 p-1 rounded-xl">
              {years.length ? years.map(y => (
@@ -166,7 +165,7 @@ export function MyDuesPage() {
                  key={y}
                  onClick={() => {
                    setSelectedYear(y);
-                   setSelectedWeeks([]);
+                   setSelectedMonths([]);
                  }}
                  className={clsx(
                    "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
@@ -184,13 +183,13 @@ export function MyDuesPage() {
       <div className="px-2 space-y-4">
         <div className={clsx(
           "rounded-[2rem] p-6 flex items-start gap-4 shadow-sm",
-          summary?.totalOutstanding === 0 && summary?.weeksPaid > 0 ? "bg-emerald-50 text-emerald-800 border border-emerald-100" :
+          summary?.totalOutstanding === 0 && (summary?.monthsPaid ?? summary?.weeksPaid ?? 0) > 0 ? "bg-emerald-50 text-emerald-800 border border-emerald-100" :
           summary?.totalOutstanding! > 0 ? "bg-amber-50 text-amber-800 border border-amber-100" :
           "bg-blue-50 text-blue-800 border border-blue-100"
         )}>
            <div className={clsx(
              "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0",
-             summary?.totalOutstanding === 0 && summary?.weeksPaid > 0 ? "bg-emerald-100 text-emerald-600" :
+             summary?.totalOutstanding === 0 && (summary?.monthsPaid ?? summary?.weeksPaid ?? 0) > 0 ? "bg-emerald-100 text-emerald-600" :
              summary?.totalOutstanding! > 0 ? "bg-amber-100 text-amber-600" :
              "bg-blue-100 text-blue-600"
            )}>
@@ -214,7 +213,7 @@ export function MyDuesPage() {
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Quick Pay</span>
               {customAmount && (
                 <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg">
-                  Covers {Math.floor(parseFloat(customAmount) / 2)} weeks
+                  Covers {Math.floor(parseFloat(customAmount) / MONTHLY_DUES_AMOUNT)} months
                 </span>
               )}
            </div>
@@ -222,32 +221,32 @@ export function MyDuesPage() {
               <span className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-slate-300 text-lg">GHS</span>
               <input 
                 type="number"
-                step="2"
+                step={MONTHLY_DUES_AMOUNT}
                 placeholder="Enter amount (e.g. 10, 20...)"
                 value={customAmount}
                 onChange={(e) => handleAmountChange(e.target.value)}
                 className={clsx(
                   "w-full bg-slate-50 border-none rounded-xl pl-20 pr-6 py-6 text-xl font-black text-slate-900 placeholder:text-slate-300 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all",
-                  customAmount && parseFloat(customAmount) % 2 !== 0 && "ring-2 ring-amber-500/50 bg-amber-50/50"
+                  customAmount && parseFloat(customAmount) % MONTHLY_DUES_AMOUNT !== 0 && "ring-2 ring-amber-500/50 bg-amber-50/50"
                 )}
               />
            </div>
-           {customAmount && parseFloat(customAmount) % 2 !== 0 && (
+           {customAmount && parseFloat(customAmount) % MONTHLY_DUES_AMOUNT !== 0 && (
              <p className="text-[10px] font-bold text-amber-600 px-2 flex items-center gap-1">
                <AlertCircle className="w-3 h-3" />
-               Please enter an even amount (multiples of 2) for exact week coverage.
+               Please enter an even amount (multiples of {MONTHLY_DUES_AMOUNT}) for exact month coverage.
              </p>
            )}
            <p className="text-[10px] font-medium text-slate-400 px-2">
-             * This will automatically select your {summary?.totalOutstanding! > 0 ? "oldest outstanding" : "upcoming"} weeks.
+             * This will automatically select your {summary?.totalOutstanding! > 0 ? "oldest outstanding" : "upcoming"} months.
            </p>
         </div>
       </div>
 
-      {/* Weekly List */}
+      {/* Monthly List */}
       <div className="space-y-3 px-2">
-        {visibleWeeks.length ? (
-          visibleWeeks.map((week) => (
+        {visibleMonths.length ? (
+          visibleMonths.map((week) => (
             <div 
               key={week.id} 
               className={clsx(
@@ -261,21 +260,21 @@ export function MyDuesPage() {
               <div className="flex items-center gap-4">
                  {week.status === "unpaid" && (
                    <button 
-                    onClick={() => toggleWeek(week.weekOf)}
+                    onClick={() => toggleMonth(week.weekOf)}
                     className={clsx(
                       "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all",
-                      selectedWeeks.includes(week.weekOf) ? "bg-blue-700 border-blue-700 text-white" : "border-slate-200 bg-white"
+                      selectedMonths.includes(week.weekOf) ? "bg-blue-700 border-blue-700 text-white" : "border-slate-200 bg-white"
                     )}
                    >
-                     {selectedWeeks.includes(week.weekOf) && <CheckCircle2 className="w-4 h-4" />}
+                     {selectedMonths.includes(week.weekOf) && <CheckCircle2 className="w-4 h-4" />}
                    </button>
                  )}
                  <div>
                     <p className="font-bold text-slate-900 text-sm">
-                      {new Date(week.weekOf).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                      {new Date(week.weekOf).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
                     </p>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                      Week {week.weekNumber}
+                      Month {week.monthNumber ?? week.weekNumber}
                     </p>
                  </div>
               </div>
@@ -293,9 +292,9 @@ export function MyDuesPage() {
                     new Date(week.weekOf) > new Date() ? "⌛ Future" : 
                     "❌ Overdue"}
                  </span>
-                 {week.status === "unpaid" && !selectedWeeks.includes(week.weekOf) && (
-                    <button 
-                      onClick={() => toggleWeek(week.weekOf)}
+                 {week.status === "unpaid" && !selectedMonths.includes(week.weekOf) && (
+                   <button 
+                      onClick={() => toggleMonth(week.weekOf)}
                       className={clsx(
                         "px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
                         new Date(week.weekOf) > new Date() ? "bg-white border border-slate-200 text-slate-400" : "bg-slate-900 text-white shadow-lg shadow-slate-900/10"
@@ -312,20 +311,20 @@ export function MyDuesPage() {
             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-200">
                <Calendar className="w-8 h-8" />
             </div>
-            <p className="text-slate-400 font-medium">No dues records yet. Your contributions will appear here each week 🙏</p>
+            <p className="text-slate-400 font-medium">No dues records yet. Your contributions will appear here each month 🙏</p>
           </div>
         )}
 
-        {sortedWeeks.length > visibleWeeks.length && (
-          <button 
-            onClick={() => setSelectedWeeks(sortedWeeks.map(w => w.weekOf).slice(0, visibleWeeks.length + 5))}
+        {sortedMonths.length > visibleMonths.length && (
+          <button
+            onClick={() => setSelectedMonths(sortedMonths.map(w => w.weekOf).slice(0, visibleMonths.length + 5))}
             className="w-full py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors"
           >
-            + Show More Weeks
+            + Show More Months
           </button>
         )}
 
-        {isAllPaid && sortedWeeks.length > 0 && (
+        {isAllPaid && sortedMonths.length > 0 && (
            <div className="p-8 text-center bg-emerald-50 rounded-[2rem] border border-emerald-100 mt-4 animate-in zoom-in-95">
               <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-4" />
               <p className="text-emerald-900 font-black">Nothing to pay for {selectedYear} — well done! 🎉</p>
@@ -353,7 +352,7 @@ export function MyDuesPage() {
       {/* Download Button */}
       <div className="px-2">
          <button 
-           disabled={isDownloading || sortedWeeks.length === 0}
+           disabled={isDownloading || sortedMonths.length === 0}
            onClick={handleDownload}
            className="w-full flex items-center justify-center gap-3 py-5 rounded-2xl border-2 border-slate-900 text-slate-900 font-black uppercase tracking-widest text-[10px] hover:bg-slate-900 hover:text-white transition-all active:scale-95 disabled:opacity-30 disabled:pointer-events-none"
          >
@@ -366,7 +365,7 @@ export function MyDuesPage() {
 
       {/* Sticky Action Bar */}
       <AnimatePresence>
-        {selectedWeeks.length > 0 && (
+        {selectedMonths.length > 0 && (
           <motion.div 
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -377,7 +376,7 @@ export function MyDuesPage() {
                <div className="text-white">
                   <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-0.5">Selection Details</p>
                   <p className="text-xl font-black tracking-tight">
-                    {selectedWeeks.length} {selectedWeeks.length === 1 ? 'week' : 'weeks'} — GHS {formatMoney(totalSelected)}
+                    {selectedMonths.length} {selectedMonths.length === 1 ? 'month' : 'months'} — GHS {formatMoney(totalSelected)}
                   </p>
                </div>
                <button 

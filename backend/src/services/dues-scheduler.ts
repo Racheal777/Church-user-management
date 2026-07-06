@@ -1,11 +1,10 @@
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "../lib/prisma.js";
+import { MONTHLY_DUES_AMOUNT } from "./dues-service.js";
 
-export async function generateWeeklyDues(targetDate = new Date()) {
+export async function generateMonthlyDues(targetDate = new Date()) {
   const targetYear = targetDate.getUTCFullYear();
-  const yearStart = new Date(Date.UTC(targetYear, 0, 1));
-  const yearEnd = new Date(Date.UTC(targetYear, 11, 31));
   const members = await prisma.member.findMany({
     where: { is_active: true },
     select: { id: true, date_joined: true }
@@ -16,29 +15,30 @@ export async function generateWeeklyDues(targetDate = new Date()) {
   }
 
   const rows = members.flatMap((member) => {
-    const weeks: Array<{
+    const months: Array<{
       member_id: string;
       amount: Prisma.Decimal;
       week_of: Date;
       payment_status: "pending";
     }> = [];
 
-    const firstMonday = getFirstMondayOfYear(targetYear);
-    const memberJoinDate = member.date_joined || firstMonday;
+    const memberJoinMonth = member.date_joined
+      ? new Date(Date.UTC(member.date_joined.getUTCFullYear(), member.date_joined.getUTCMonth(), 1))
+      : new Date(Date.UTC(targetYear, 0, 1));
 
-    for (let cursor = new Date(firstMonday); cursor <= yearEnd; cursor.setUTCDate(cursor.getUTCDate() + 7)) {
-      // Skip weeks before member joined
-      if (cursor < memberJoinDate) continue;
-      
-      weeks.push({
+    for (let month = 0; month < 12; month += 1) {
+      const monthStart = new Date(Date.UTC(targetYear, month, 1));
+      if (monthStart < memberJoinMonth) continue;
+
+      months.push({
         member_id: member.id,
-        amount: new Prisma.Decimal("2.00"),
-        week_of: new Date(cursor),
+        amount: new Prisma.Decimal(MONTHLY_DUES_AMOUNT.toFixed(2)),
+        week_of: monthStart,
         payment_status: "pending"
       });
     }
 
-    return weeks;
+    return months;
   });
 
   const result = await prisma.duesPayment.createMany({
@@ -49,18 +49,12 @@ export async function generateWeeklyDues(targetDate = new Date()) {
   return result.count;
 }
 
+export const generateWeeklyDues = generateMonthlyDues;
+
 export function startSchedulers() {
-  void generateWeeklyDues();
+  void generateMonthlyDues();
   const interval = 12 * 60 * 60 * 1000;
   setInterval(() => {
-    void generateWeeklyDues();
+    void generateMonthlyDues();
   }, interval);
-}
-
-function getFirstMondayOfYear(year: number) {
-  const date = new Date(Date.UTC(year, 0, 1));
-  while (date.getUTCDay() !== 1) {
-    date.setUTCDate(date.getUTCDate() + 1);
-  }
-  return date;
 }

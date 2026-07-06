@@ -2,7 +2,8 @@ import type { DuesLedgerItem, DuesLedgerResponse } from "../../lib/api";
 import clsx from "clsx";
 import { motion } from "framer-motion";
 
-export const WEEKLY_DUES_AMOUNT = 2;
+export const MONTHLY_DUES_AMOUNT = 2;
+export const WEEKLY_DUES_AMOUNT = MONTHLY_DUES_AMOUNT;
 export const currentDate = new Date();
 export const currentYear = currentDate.getUTCFullYear();
 export const currentMonth = currentDate.getUTCMonth();
@@ -166,6 +167,9 @@ export function getYearSummary(data: DuesLedgerResponse | undefined, year: strin
       totalDue: 0,
       totalPaid: 0,
       totalOutstanding: 0,
+      totalMonths: 0,
+      monthsPaid: 0,
+      monthsPending: 0,
       totalWeeks: 0,
       weeksPaid: 0,
       weeksPending: 0

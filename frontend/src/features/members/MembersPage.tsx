@@ -10,15 +10,12 @@ import {
   ShieldCheck, 
   Mail, 
   Phone, 
-  Calendar,
-  MoreVertical,
+  MapPin,
   ChevronRight,
   ChevronLeft as ChevronLeftIcon,
   X,
-  Filter,
   Users,
   CheckCircle2,
-  Clock,
   ArrowRight
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -37,6 +34,8 @@ const blankForm = {
   phoneNumber: "",
   email: "",
   whatsappNumber: "",
+  location: "",
+  notes: "",
   dateOfBirth: "",
   role: "member" as Role,
   teamId: ""
@@ -51,11 +50,17 @@ export function MembersPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [form, setForm] = useState(blankForm);
   const [searchTerm, setSearchTerm] = useState("");
+  const [teamFilter, setTeamFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [currentPage, setCurrentPage] = useState(1);
 
   const membersQuery = useQuery({
-    queryKey: ["members-admin-list"],
-    queryFn: () => api.listMembers({}, accessToken!),
+    queryKey: ["members-admin-list", searchTerm, teamFilter, statusFilter],
+    queryFn: () => api.listMembers({
+      search: searchTerm || undefined,
+      teamId: teamFilter || undefined,
+      activeStatus: statusFilter
+    }, accessToken!),
     enabled: Boolean(accessToken)
   });
   
@@ -76,6 +81,8 @@ export function MembersPage() {
       phoneNumber: editingMember.phoneNumber ?? "",
       email: editingMember.email ?? "",
       whatsappNumber: editingMember.whatsappNumber ?? "",
+      location: editingMember.location ?? "",
+      notes: editingMember.notes ?? "",
       dateOfBirth: editingMember.dateOfBirth?.slice(0, 10) ?? "",
       role: editingMember.role,
       teamId: editingMember.team?.id ?? ""
@@ -94,6 +101,8 @@ export function MembersPage() {
             teamId: form.teamId || null,
             email: form.email || null,
             whatsappNumber: form.whatsappNumber || null,
+            location: form.location || null,
+            notes: form.notes || null,
             dateOfBirth: form.dateOfBirth || null
           },
           accessToken
@@ -105,6 +114,8 @@ export function MembersPage() {
             teamId: form.teamId || null,
             email: form.email || null,
             whatsappNumber: form.whatsappNumber || null,
+            location: form.location || null,
+            notes: form.notes || null,
             dateOfBirth: form.dateOfBirth || null
           },
           accessToken
@@ -147,17 +158,19 @@ export function MembersPage() {
     }
   }
 
-  const filteredMembers = useMemo(() => {
-    return membersQuery.data?.members.filter(m => 
-      `${m.firstName} ${m.lastName} ${m.phoneNumber} ${m.email}`.toLowerCase().includes(searchTerm.toLowerCase())
-    ) || [];
-  }, [membersQuery.data?.members, searchTerm]);
+  const filteredMembers = useMemo(() => membersQuery.data?.members ?? [], [membersQuery.data?.members]);
 
-  const totalPages = Math.ceil(filteredMembers.length / ITEMS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filteredMembers.length / ITEMS_PER_PAGE));
   const paginatedMembers = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredMembers.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredMembers, currentPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const stats = useMemo(() => {
     const members = membersQuery.data?.members || [];
@@ -236,11 +249,32 @@ export function MembersPage() {
               }}
             />
           </div>
-          <div className="flex items-center gap-4">
-            <button className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 text-slate-500 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all">
-              <Filter className="w-4 h-4" />
-              Filter
-            </button>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <select
+              value={teamFilter}
+              onChange={(event) => {
+                setTeamFilter(event.target.value);
+                setCurrentPage(1);
+              }}
+              className="bg-slate-50 border-none rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-500 outline-none focus:ring-4 focus:ring-blue-500/10"
+            >
+              <option value="">All teams</option>
+              {teamsQuery.data?.teams.map((team) => (
+                <option key={team.id} value={team.id}>{team.name}</option>
+              ))}
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(event) => {
+                setStatusFilter(event.target.value as "all" | "active" | "inactive");
+                setCurrentPage(1);
+              }}
+              className="bg-slate-50 border-none rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-500 outline-none focus:ring-4 focus:ring-blue-500/10"
+            >
+              <option value="all">All status</option>
+              <option value="active">Active only</option>
+              <option value="inactive">Inactive only</option>
+            </select>
             <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
               Showing {paginatedMembers.length} of {filteredMembers.length}
             </div>
@@ -282,6 +316,11 @@ export function MembersPage() {
                            <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {item.phoneNumber}</span>
                            <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {item.email || 'N/A'}</span>
                         </div>
+                        {item.location && (
+                          <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            <MapPin className="w-3 h-3" /> {item.location}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -450,6 +489,10 @@ export function MembersPage() {
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">WhatsApp (Optional)</label>
                     <input className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm font-bold text-slate-700" placeholder="+233..." value={form.whatsappNumber} onChange={(event) => setForm((current) => ({ ...current, whatsappNumber: event.target.value }))} />
                   </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Location</label>
+                    <input className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm font-bold text-slate-700" placeholder="Area or residence" value={form.location} onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))} />
+                  </div>
                 </div>
 
                 <div className="space-y-6">
@@ -480,6 +523,15 @@ export function MembersPage() {
                         ))}
                       </select>
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Notes</label>
+                    <textarea
+                      className="min-h-28 w-full resize-none bg-slate-50 border-none rounded-2xl px-5 py-4 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm font-bold text-slate-700"
+                      placeholder="Pastoral care notes, follow-up context, or admin reminders"
+                      value={form.notes}
+                      onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+                    />
                   </div>
                 </div>
               </div>

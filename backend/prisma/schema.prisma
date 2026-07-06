@@ -86,6 +86,11 @@ model Member {
   phone_number               String              @unique
   whatsapp_number            String?
   email                      String?
+  location                   String?
+  profession                 String?
+  Education_level            String?
+  place_of_work              String?
+  notes                      String?
   date_of_birth              DateTime?
   marital_status             MaritalStatus?
   date_joined                DateTime?

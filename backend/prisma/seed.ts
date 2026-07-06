@@ -1,7 +1,5 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 
-import { getWeekMonday } from "../src/utils/dates.js";
-
 const prisma = new PrismaClient();
 
 async function main() {
@@ -93,28 +91,28 @@ async function main() {
   });
 
   const members = [president, secretary, finance];
-  const currentMonday = getWeekMonday(new Date());
+  const now = new Date();
+  const currentMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 
   for (const member of members) {
-    for (let week = 0; week < 4; week += 1) {
-      const weekDate = new Date(currentMonday);
-      weekDate.setUTCDate(currentMonday.getUTCDate() - week * 7);
+    for (let month = 0; month < 4; month += 1) {
+      const monthDate = new Date(Date.UTC(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth() - month, 1));
       await prisma.duesPayment.upsert({
         where: {
           member_id_week_of: {
             member_id: member.id,
-            week_of: weekDate
+            week_of: monthDate
           }
         },
         update: {},
         create: {
           member_id: member.id,
           amount: new Prisma.Decimal("2.00"),
-          week_of: weekDate,
-          payment_status: week < 2 ? "confirmed" : "pending",
-          payment_method: week < 2 ? "cash" : null,
-          recorded_by: week < 2 ? finance.id : null,
-          payment_date: week < 2 ? new Date() : null
+          week_of: monthDate,
+          payment_status: month < 2 ? "confirmed" : "pending",
+          payment_method: month < 2 ? "cash" : null,
+          recorded_by: month < 2 ? finance.id : null,
+          payment_date: month < 2 ? new Date() : null
         }
       });
     }

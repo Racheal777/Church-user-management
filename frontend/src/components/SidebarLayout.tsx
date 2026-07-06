@@ -62,10 +62,12 @@ export function SidebarLayout() {
     <div className="dashboard-shell admin-side">
       <aside className="dashboard-sidebar">
         <Link to="/" className="dashboard-brand">
-          <div className="dashboard-brand-mark">PY</div>
+          <div className="h-12 w-12 overflow-hidden rounded-xl bg-white shadow-sm border border-slate-100">
+            <img src="/logo.png" alt="YPG" className="h-full w-full object-contain p-1" />
+          </div>
           <div>
             <p className="dashboard-brand-title">YPG</p>
-            <p className="dashboard-brand-subtitle">Admin Dashboard</p>
+            <p className="dashboard-brand-subtitle">Service All The Way</p>
           </div>
         </Link>
 
@@ -88,10 +90,12 @@ export function SidebarLayout() {
 
       <header className="dashboard-mobile-bar">
         <Link to="/" className="dashboard-brand">
-          <div className="dashboard-brand-mark">PY</div>
+          <div className="h-12 w-12 overflow-hidden rounded-xl bg-white shadow-sm border border-slate-100">
+            <img src="/logo.png" alt="YPG" className="h-full w-full object-contain p-1" />
+          </div>
           <div>
             <p className="dashboard-brand-title">YPG</p>
-            <p className="dashboard-brand-subtitle">Admin</p>
+            <p className="dashboard-brand-subtitle">Service All The Way</p>
           </div>
         </Link>
         <button className="dashboard-icon-button" onClick={() => setMenuOpen((current) => !current)}>
@@ -101,15 +105,10 @@ export function SidebarLayout() {
 
       <div className="dashboard-content">
         <div className="dashboard-topbar">
-          <div className="dashboard-search">
-            <Search className="h-4 w-4" />
-            Search members, sessions, or reports
-          </div>
-
-          <div className="dashboard-profile">
-            <button className="dashboard-icon-button" type="button">
+          <div className="dashboard-profile ml-auto">
+            <Link to="/announcements" className="dashboard-icon-button">
               <Bell className="h-4 w-4" />
-            </button>
+            </Link>
             <Link to="/profile" className="dashboard-profile-avatar">
               {member?.profilePhotoUrl ? (
                 <img src={member.profilePhotoUrl} alt={member.firstName} />

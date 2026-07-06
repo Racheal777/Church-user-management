@@ -56,7 +56,7 @@ export function AttendanceManagerPage() {
       await api.startAttendanceSession(meetingDate || undefined, accessToken);
       await activeQuery.refetch();
       toast.success({
-        title: "Session Started",
+        title: "Attendance Started",
         description: "Live check-in is now active."
       });
     } catch (error) {
@@ -74,7 +74,7 @@ export function AttendanceManagerPage() {
       await api.closeAttendanceSession(activeQuery.data.session.id, accessToken);
       await activeQuery.refetch();
       toast.info({
-        title: "Session Closed",
+        title: "Attendance Closed",
         description: "Self check-ins have been disabled."
       });
     } catch (error) {
@@ -112,7 +112,7 @@ export function AttendanceManagerPage() {
       {/* Header */}
       <div>
         <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Attendance Hub</h1>
-        <p className="text-slate-500 text-sm font-medium">Coordinate live sessions and monitor member participation.</p>
+        <p className="text-slate-500 text-sm font-medium">Coordinate live attendance and monitor member participation.</p>
       </div>
 
       <div className="grid gap-10 lg:grid-cols-12">
@@ -124,7 +124,7 @@ export function AttendanceManagerPage() {
                    <Activity className="w-6 h-6" />
                 </div>
                 <div>
-                   <h3 className="text-xl font-bold text-slate-900 tracking-tight">Session Manager</h3>
+                   <h3 className="text-xl font-bold text-slate-900 tracking-tight">Attendance Manager</h3>
                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Real-time Coordination</p>
                 </div>
              </div>
@@ -132,7 +132,7 @@ export function AttendanceManagerPage() {
              {isMissingSession ? (
                 <div className="space-y-8 animate-in fade-in duration-500">
                    <div className="bg-slate-50 p-8 rounded-2xl border border-dashed border-slate-200 text-center space-y-4">
-                      <p className="text-sm font-bold text-slate-500">No active session found. Ready to start?</p>
+                      <p className="text-sm font-bold text-slate-500">No active attendance found. Ready to start?</p>
                       <div className="max-w-sm mx-auto space-y-4">
                          <div className="space-y-2 text-left">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Meeting Date</label>
@@ -148,7 +148,7 @@ export function AttendanceManagerPage() {
                            onClick={() => void startSession()}
                          >
                            <Play className="w-4 h-4 fill-current" />
-                           Initialize Session
+                           Initialize Attendance
                          </button>
                       </div>
                    </div>
@@ -230,7 +230,7 @@ export function AttendanceManagerPage() {
  
                    <div className="grid grid-cols-2 gap-6">
                      <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 group transition-all hover:bg-white hover:shadow-lg hover:border-blue-100">
-                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Session Date</p>
+                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Attendance Date</p>
                        <div className="flex items-center gap-2 text-slate-900 font-bold">
                           <Calendar className="w-4 h-4 text-blue-600" />
                           {activeQuery.data?.session && new Date(activeQuery.data.session.meetingDate).toLocaleDateString(undefined, { dateStyle: 'medium' })}
@@ -264,7 +264,7 @@ export function AttendanceManagerPage() {
                      onClick={() => void closeSession()}
                    >
                      <X className="w-4 h-4" />
-                     Terminate Live Session
+                     Terminate Live Attendance
                    </button>
                 </div>
              ) : (
@@ -313,7 +313,7 @@ export function AttendanceManagerPage() {
 
               <div className="mt-10 p-6 rounded-2xl bg-slate-50 border border-slate-100">
                  <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase tracking-widest">
-                    Manual check-ins are only permitted while a session is active or recently concluded.
+                    Manual check-ins are only permitted while attendance is active or recently concluded.
                  </p>
               </div>
            </div>

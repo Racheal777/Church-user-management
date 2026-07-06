@@ -32,6 +32,8 @@ const createMemberSchema = z.object({
   phoneNumber: z.string().min(8),
   whatsappNumber: z.string().optional().nullable(),
   email: z.string().email().optional().nullable(),
+  location: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
   dateOfBirth: z.string().optional().nullable(),
   maritalStatus: z.enum(["single", "married", "divorced", "widowed"]).optional().nullable(),
   dateJoined: z.string().optional().nullable(),
@@ -98,6 +100,8 @@ function serializePrivateMember(member: MemberWithTeam) {
     phoneNumber: member.phone_number,
     whatsappNumber: member.whatsapp_number,
     email: member.email,
+    location: member.location,
+    notes: member.notes,
     dateOfBirth: member.date_of_birth,
     maritalStatus: member.marital_status,
     dateJoined: member.date_joined,
@@ -212,6 +216,8 @@ export function registerMemberRoutes(router: Router) {
           phone_number: normalizePhoneNumber(payload.phoneNumber),
           whatsapp_number: payload.whatsappNumber,
           email: payload.email,
+          location: payload.location,
+          notes: payload.notes,
           date_of_birth: parseOptionalDate(payload.dateOfBirth),
           marital_status: payload.maritalStatus,
           date_joined: payload.dateJoined ? new Date(payload.dateJoined) : getNextMonday(new Date()),
@@ -264,6 +270,8 @@ export function registerMemberRoutes(router: Router) {
         if (payload.phoneNumber) data.phone_number = normalizePhoneNumber(payload.phoneNumber);
         if (payload.whatsappNumber !== undefined) data.whatsapp_number = payload.whatsappNumber;
         if (payload.email !== undefined) data.email = payload.email;
+        if (payload.location !== undefined) data.location = payload.location;
+        if (payload.notes !== undefined) data.notes = payload.notes;
         if (payload.dateOfBirth !== undefined) data.date_of_birth = parseOptionalDate(payload.dateOfBirth);
         if (payload.maritalStatus !== undefined) data.marital_status = payload.maritalStatus;
         if (payload.dateJoined !== undefined) data.date_joined = parseOptionalDate(payload.dateJoined);

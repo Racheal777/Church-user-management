@@ -1,6 +1,7 @@
 import type { DuesPayment } from "@prisma/client";
 
-export const WEEKLY_DUES_AMOUNT = 2;
+export const MONTHLY_DUES_AMOUNT = 2;
+export const WEEKLY_DUES_AMOUNT = MONTHLY_DUES_AMOUNT;
 
 export type DuesStatus = "paid" | "unpaid" | "advance";
 
@@ -9,7 +10,10 @@ export interface LedgerItem {
   memberId: string;
   amount: number;
   weekOf: Date;
+  periodOf: Date;
   weekNumber: number;
+  monthNumber: number;
+  monthName: string;
   status: DuesStatus;
   method: string | null;
   paymentDate: Date | null;
@@ -20,35 +24,32 @@ export function buildDuesLedger(rows: DuesPayment[], memberJoinedDate?: Date) {
   const now = new Date();
   const currentYear = now.getUTCFullYear();
   const startYear = memberJoinedDate ? memberJoinedDate.getUTCFullYear() : currentYear;
-  
-  const horizon = new Date(now);
-  horizon.setUTCDate(horizon.getUTCDate() + 84); // Look 12 weeks (3 months) ahead
-  
-  const allMondays: Date[] = [];
-  for (let year = startYear; year <= currentYear + 1; year++) {
-    const firstMonday = getFirstMondayOfYear(year);
-    const lastDayOfYear = new Date(Date.UTC(year, 11, 31));
-    
-    for (let cursor = new Date(firstMonday); cursor <= lastDayOfYear && cursor <= horizon; cursor.setUTCDate(cursor.getUTCDate() + 7)) {
-      if (memberJoinedDate && cursor < memberJoinedDate) continue;
-      allMondays.push(new Date(cursor));
+  const joinedMonthStart = memberJoinedDate ? getMonthStart(memberJoinedDate) : undefined;
+
+  const allMonths: Date[] = [];
+  for (let year = startYear; year <= currentYear; year++) {
+    for (let month = 0; month < 12; month += 1) {
+      const monthStart = new Date(Date.UTC(year, month, 1));
+      if (joinedMonthStart && monthStart < joinedMonthStart) continue;
+      allMonths.push(monthStart);
     }
   }
 
-  // 2. Map existing rows to a lookup
-  const rowMap = new Map(rows.map(r => [r.week_of.toISOString().split('T')[0], r]));
+  const rowMap = new Map(rows.map((row) => [toIsoDate(row.week_of), row]));
 
-  // 3. Build the ledger
-  const ledger: LedgerItem[] = allMondays.map(monday => {
-    const isoDate = monday.toISOString().split('T')[0];
+  const ledger: LedgerItem[] = allMonths.map((monthStart) => {
+    const isoDate = toIsoDate(monthStart);
     const row = rowMap.get(isoDate);
 
     return {
       id: row?.id || `unpaid-${isoDate}`,
       memberId: row?.member_id || "",
-      amount: row ? Number(row.amount) : WEEKLY_DUES_AMOUNT,
-      weekOf: monday,
-      weekNumber: getWeekNumber(monday),
+      amount: row ? Number(row.amount) : MONTHLY_DUES_AMOUNT,
+      weekOf: monthStart,
+      periodOf: monthStart,
+      weekNumber: monthStart.getUTCMonth() + 1,
+      monthNumber: monthStart.getUTCMonth() + 1,
+      monthName: monthStart.toLocaleString("en", { month: "long", timeZone: "UTC" }),
       status: row?.payment_status === "confirmed" ? "paid" : "unpaid",
       method: row?.payment_method || null,
       paymentDate: row?.payment_date || null,
@@ -56,38 +57,31 @@ export function buildDuesLedger(rows: DuesPayment[], memberJoinedDate?: Date) {
     };
   });
 
-  // 4. Handle Carry-Forward (Advance) Logic
-  // Total paid by member
   const totalConfirmedAmount = rows
-    .filter(r => r.payment_status === "confirmed")
-    .reduce((sum, r) => sum + Number(r.amount), 0);
+    .filter((row) => row.payment_status === "confirmed")
+    .reduce((sum, row) => sum + Number(row.amount), 0);
 
-  // Total required for weeks passed so far
-  const totalRequiredForPassedWeeks = ledger.length * WEEKLY_DUES_AMOUNT;
-  
-  // Calculate surplus
-  let surplus = totalConfirmedAmount - totalRequiredForPassedWeeks;
+  const currentMonthStart = getMonthStart(now);
+  const dueMonths = ledger.filter((item) => item.weekOf <= currentMonthStart);
+  const totalRequiredForDueMonths = dueMonths.length * MONTHLY_DUES_AMOUNT;
+  let surplus = totalConfirmedAmount - totalRequiredForDueMonths;
 
-  // If there's surplus, mark future weeks as "advance"
   if (surplus > 0) {
-    const futureWeeksCount = Math.floor(surplus / WEEKLY_DUES_AMOUNT);
-    // Fallback to current week's Monday if they haven't had any due weeks yet
-    const baseDate = allMondays.length > 0 
-      ? allMondays[allMondays.length - 1] 
-      : getFirstMondayOfYear(now.getUTCFullYear());
-    
-    for (let i = 1; i <= futureWeeksCount; i++) {
-      const nextMonday = new Date(baseDate);
-      // If we are starting from a fallback, we might need to skip already passed weeks
-      // But buildDuesLedger is usually called for the "current" view
-      nextMonday.setUTCDate(nextMonday.getUTCDate() + (i * 7));
-      
+    const futureMonthsCount = Math.floor(surplus / MONTHLY_DUES_AMOUNT);
+    const baseDate = allMonths.length > 0 ? allMonths[allMonths.length - 1] : getMonthStart(now);
+
+    for (let i = 1; i <= futureMonthsCount; i += 1) {
+      const nextMonth = addMonths(baseDate, i);
+
       ledger.push({
-        id: `advance-${nextMonday.toISOString()}`,
+        id: `advance-${nextMonth.toISOString()}`,
         memberId: "",
-        amount: WEEKLY_DUES_AMOUNT,
-        weekOf: nextMonday,
-        weekNumber: getWeekNumber(nextMonday),
+        amount: MONTHLY_DUES_AMOUNT,
+        weekOf: nextMonth,
+        periodOf: nextMonth,
+        weekNumber: nextMonth.getUTCMonth() + 1,
+        monthNumber: nextMonth.getUTCMonth() + 1,
+        monthName: nextMonth.toLocaleString("en", { month: "long", timeZone: "UTC" }),
         status: "advance",
         method: "carry-forward",
         paymentDate: now
@@ -95,67 +89,70 @@ export function buildDuesLedger(rows: DuesPayment[], memberJoinedDate?: Date) {
     }
   }
 
-  // 5. Group by Year and Calculate Summaries
-  const sortedLedger = ledger.sort((a, b) => b.weekOf.getTime() - a.weekOf.getTime());
-  const years = [...new Set(sortedLedger.map(i => i.weekOf.getUTCFullYear()))].sort((a, b) => b - a);
+  const sortedLedger = ledger.sort((left, right) => right.weekOf.getTime() - left.weekOf.getTime());
+  const years = [...new Set(sortedLedger.map((item) => item.weekOf.getUTCFullYear()))].sort((left, right) => right - left);
 
-  const annualBreakdown = years.map(year => {
-    const yearItems = sortedLedger.filter(i => i.weekOf.getUTCFullYear() === year);
-    const paidItems = yearItems.filter(i => i.status === "paid" || i.status === "advance");
-    
-    // Outstanding only includes UNPAID weeks that have already passed (or are current)
-    const outstandingItems = yearItems.filter(i => i.status === "unpaid" && i.weekOf <= now);
+  const annualBreakdown = years.map((year) => {
+    const yearItems = sortedLedger.filter((item) => item.weekOf.getUTCFullYear() === year);
+    const paidItems = yearItems.filter((item) => item.status === "paid" || item.status === "advance");
+    const outstandingItems = yearItems.filter((item) => item.status === "unpaid" && item.weekOf <= currentMonthStart);
 
     return {
       year,
-      totalPaid: paidItems.length * WEEKLY_DUES_AMOUNT,
-      totalOutstanding: outstandingItems.length * WEEKLY_DUES_AMOUNT,
+      totalPaid: paidItems.length * MONTHLY_DUES_AMOUNT,
+      totalOutstanding: outstandingItems.length * MONTHLY_DUES_AMOUNT,
+      totalMonths: yearItems.length,
+      monthsPaid: paidItems.length,
+      monthsPending: outstandingItems.length,
       totalWeeks: yearItems.length,
       weeksPaid: paidItems.length,
       weeksPending: outstandingItems.length
     };
   });
 
-  const totalPaid = annualBreakdown.reduce((sum, y) => sum + y.totalPaid, 0);
-  const totalOutstanding = annualBreakdown.reduce((sum, y) => sum + y.totalOutstanding, 0);
-  const weeksPaid = annualBreakdown.reduce((sum, y) => sum + y.weeksPaid, 0);
-  const weeksBehind = annualBreakdown.reduce((sum, y) => sum + y.weeksPending, 0);
+  const totalPaid = annualBreakdown.reduce((sum, year) => sum + year.totalPaid, 0);
+  const totalOutstanding = annualBreakdown.reduce((sum, year) => sum + year.totalOutstanding, 0);
+  const monthsPaid = annualBreakdown.reduce((sum, year) => sum + year.monthsPaid, 0);
+  const monthsBehind = annualBreakdown.reduce((sum, year) => sum + year.monthsPending, 0);
 
   return {
-    ledger: sortedLedger.map(item => ({
+    ledger: sortedLedger.map((item) => ({
       ...item,
-      weekOf: item.weekOf instanceof Date && !isNaN(item.weekOf.getTime()) 
-        ? item.weekOf.toISOString() 
-        : new Date().toISOString()
+      weekOf: toIsoDateTime(item.weekOf),
+      periodOf: toIsoDateTime(item.periodOf)
     })),
     summary: {
       totalPaid,
       totalOutstanding,
-      weeksPaid,
-      weeksBehind,
+      monthsPaid,
+      monthsBehind,
+      totalMonths: ledger.length,
+      weeksPaid: monthsPaid,
+      weeksBehind: monthsBehind,
       totalWeeks: ledger.length,
-      statusMessage: totalOutstanding > 0 
-        ? `You're ${weeksBehind} weeks behind`
-        : surplus > 0 
-          ? `You're ${Math.floor(surplus / WEEKLY_DUES_AMOUNT)} weeks ahead`
-          : "You're all caught up!"
+      statusMessage:
+        totalOutstanding > 0
+          ? `You're ${monthsBehind} ${monthsBehind === 1 ? "month" : "months"} behind`
+          : surplus > 0
+            ? `You're ${Math.floor(surplus / MONTHLY_DUES_AMOUNT)} ${Math.floor(surplus / MONTHLY_DUES_AMOUNT) === 1 ? "month" : "months"} ahead`
+            : "You're all caught up!"
     },
     annualBreakdown
   };
 }
 
-function getFirstMondayOfYear(year: number) {
-  const date = new Date(Date.UTC(year, 0, 1));
-  while (date.getUTCDay() !== 1) {
-    date.setUTCDate(date.getUTCDate() + 1);
-  }
-  return date;
+function getMonthStart(date: Date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
 }
 
-function getWeekNumber(d: Date) {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  return weekNo;
+function addMonths(date: Date, count: number) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + count, 1));
+}
+
+function toIsoDate(value: Date) {
+  return value.toISOString().split("T")[0];
+}
+
+function toIsoDateTime(value: Date) {
+  return value instanceof Date && !Number.isNaN(value.getTime()) ? value.toISOString() : new Date().toISOString();
 }

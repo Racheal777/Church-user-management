@@ -48,7 +48,7 @@ export function CriticalFollowupsPage() {
         </Link>
         <h1 className="text-4xl font-black tracking-tight text-slate-900">Critical Follow-ups</h1>
         <p className="mt-2 text-lg text-slate-500">
-          Members who have missed 3 or more consecutive Monday sessions.
+          Members who have missed 3 or more consecutive Monday attendances.
         </p>
       </div>
 
@@ -77,7 +77,7 @@ export function CriticalFollowupsPage() {
         <div className="rounded-xl border border-dashed border-slate-200 bg-white py-20 text-center">
           <p className="text-5xl mb-4">🎉</p>
           <p className="text-lg font-bold text-slate-900">Everyone is showing up. Great fellowship!</p>
-          <p className="mt-2 text-sm text-slate-500">No members have missed 3 or more consecutive sessions.</p>
+          <p className="mt-2 text-sm text-slate-500">No members have missed 3 or more consecutive attendances.</p>
         </div>
       ) : (
         <div className="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden">
