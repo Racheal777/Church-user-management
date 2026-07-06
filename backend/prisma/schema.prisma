@@ -64,6 +64,8 @@ model Branch {
   teams              Team[]
   attendanceSessions AttendanceSession[]
   announcements      Announcement[]
+
+  @@unique([name]) 
 }
 
 model Team {

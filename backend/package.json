@@ -38,6 +38,7 @@
     "@types/node": "^22.15.17",
     "@types/pdfkit": "^0.17.6",
     "@types/supertest": "^6.0.3",
+    "csv-parse": "^7.0.1",
     "prettier": "^3.5.3",
     "prisma": "^6.8.2",
     "supertest": "^7.1.0",
